@@ -1,0 +1,4 @@
+*.swp
+build/
+devel/
+src/CMakeLists.txt
