@@ -1,4 +1,7 @@
 #!/bin/bash
+
+# ydlidar ver.1
+
 # Red is 1
 # Green is 2
 # Reset is sgr0
