@@ -58,6 +58,7 @@ then
 	export ROS_IP=${ip}
 	export ROS_MASTER_URI=http://localhost:11311
 	export ROS_HOSTNAME=${ip}
+	roscore
 	#each of cona
 	sshpass ${pw} ssh -o StrictHostKeyChecking=no cona1@${c1} "export ROS_MASTER_URI=http://${ip}:11311"
 	sshpass ${pw} ssh -o StrictHostKeyChecking=no cona2@${c2} "export ROS_MASTER_URI=http://${ip}:11311"
