@@ -9,4 +9,4 @@
 export ROS_MASTER_URI=http://192.168.0.7:11311
 export ROS_HOSTNAME=192.168.0.4
 source ~/.bashrc
-roslaunch ydlidar_ros G4.launch
+roslaunch ~/catkin_ws/src/ydlidar_ros/launch/G4.launch
