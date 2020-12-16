@@ -1,0 +1,18 @@
+{
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "catkin_make",
+            "command": "catkin_make",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "args": [
+                "-j4"
+            ]
+        }
+    ],
+    "version": "2.0.0"
+}
