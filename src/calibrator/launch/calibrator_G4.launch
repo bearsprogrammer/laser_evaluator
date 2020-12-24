@@ -1,0 +1,11 @@
+<launch>
+
+	<param name="robot_description" textfile="$(find calibrator)/urdf/ydlidar_eval.urdf" />
+	<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+
+	<!-- 2020-12-24 -->
+	<!-- 4 yd-G4 lidar for evaluation -->>
+	<node pkg="calibrator" type="calibrator" name="calibrator" output="screen">
+	</node>
+
+</launch>

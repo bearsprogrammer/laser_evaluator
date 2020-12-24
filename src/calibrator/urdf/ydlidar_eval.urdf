@@ -1,0 +1,35 @@
+<!-- Update: 2020-12-24 --> 
+<!-- urdf --> 
+<robot name="ydlidarG4">
+
+    <link name="map"/>
+    <link name="laser1"/>
+    <link name="laser2"/>
+    <link name="laser3"/>
+    <link name="laser4"/>
+
+    <joint name="map2laser1" type="fixed">
+        <parent link="map"/>
+        <child link="laser1"/>
+        <origin xyz="0 0 0" rpy="0 0 3.14" />
+    </joint>
+
+    <joint name="map2laser2" type="fixed">
+        <parent link="map"/>
+        <child link="laser2"/>
+        <origin xyz="0 0 0" rpy="0 0 3.14" />
+    </joint>
+
+    <joint name="map2laser3" type="fixed">
+        <parent link="map"/>
+        <child link="laser3"/>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+    </joint>
+
+    <joint name="map2laser4" type="fixed">
+        <parent link="map"/>
+        <child link="laser4"/>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+    </joint>
+
+</robot>
