@@ -6,11 +6,38 @@
 #include <tf/tf.h>
 #include <tf/transform_listener.h>
 
+class LaserPointCloud
+{
+public:
+    int sensor_num_;
+    std::vector<cv::Mat> pointcloud_;
+
+public:
+    LaserPointCloud(int _sensor_num=4) :
+        sensor_num_(_sensor_num)
+    {
+        pointcloud_.reserve(sensor_num_);
+    }
+    ~LaserPointCloud(){}
+    void add_pointcloud(std::vector<std::pair<float, cv::Point2f> > &_pointcloud)
+    {
+        if((int)_pointcloud.size() == 0)    
+        {
+            ROS_ERROR("Error for empty pointcloud..[calibrator]");
+            return;
+        }
+        cv::Mat temp_pointcloud((int)_pointcloud.size(), 3, CV_32FC1, _pointcloud.data());
+        pointcloud_.push_back(temp_pointcloud);
+        ROS_INFO("Add laser pointcloud-> [idx: %d][size: %d]", (int)pointcloud_.size(), pointcloud_.back().rows);
+    }
+};
 class sensor
 {
 private:
+    //ros
     ros::NodeHandle nh_;
     ros::Subscriber scan_sub_;
+
     bool get_tf_flag;
     tf::Matrix3x3 R;
     tf::Vector3 T;
@@ -45,8 +72,7 @@ private:
 		if(parent_frame.empty() || child_frame.empty())
 		{
 			ROS_ERROR("There is no frame name");	
-			return 0;
-		}
+			return 0; }
 
 		try
 		{
@@ -76,6 +102,7 @@ public:
     {
         topic_name_ = cv::format("/scan_%d", _idx);
 		scan_sub_ = nh_.subscribe(topic_name_, 10, &sensor::scan_callback, this);
+
         Grid_plot = cv::Mat(grid.grid_row, grid.grid_col, CV_8UC3, cv::Scalar(0,0,0));
         tf_Grid_plot = cv::Mat(grid.grid_row, grid.grid_col, CV_8UC3, cv::Scalar(0,0,0));
     }
@@ -126,7 +153,8 @@ public:
 			tf_tmp_pt.y = 1000.0f * reprj_p.getY();
 
             tmp_pc.first = angle;
-            tmp_pc.second = cv::Point2f(x, y);
+            //tmp_pc.second = cv::Point2f(x, y);
+            tmp_pc.second = cv::Point2f(reprj_p.getX(), reprj_p.getY());
 
             //printf("[%s]angle-> %f, [x, y]-> %f, %f\n", topic_name_.c_str(), 
                                                         //tmp_pc.first, tmp_pc.second.x, tmp_pc.second.y);

@@ -2,6 +2,7 @@
 #include <ros/ros.h>
 #include <opencv2/opencv.hpp>
 #include "calibrator/sensor.hpp"
+#include "calibrator/matcher.hpp"
 #include <thread>
 
 int main(int argc, char** argv)
@@ -16,9 +17,17 @@ int main(int argc, char** argv)
 	sensor laser_3(nh, 3, "map", "laser3");
 	sensor laser_4(nh, 4, "map", "laser4");
 
+	LaserPointCloud lpc(4);
+	lpc.add_pointcloud(laser_1.pointcloud);
+	lpc.add_pointcloud(laser_2.pointcloud);
+	lpc.add_pointcloud(laser_3.pointcloud);
+	lpc.add_pointcloud(laser_4.pointcloud);
+
+	matcher mc(lpc.pointcloud_, lpc.sensor_num_);
+
 //	std::thread t_1(thread_plot, &laser_1);
 //	std::thread t_1(thread_plot, [&](){});
-	std::thread t_1([&]()
+	std::thread t_visualizer([&]()
 	{
 		while (ros::ok())
 		{
@@ -44,6 +53,7 @@ int main(int argc, char** argv)
 		}
 	});
 
+
 	//ros::MultiThreadedSpinner m_spin(4);	
 	//m_spin.spin();
 	ros::AsyncSpinner spinner(4);
@@ -51,7 +61,7 @@ int main(int argc, char** argv)
 	ros::waitForShutdown();
 	//ros::spin();
 
-	t_1.join();
+	t_visualizer.join();
 
 	return 0;
 }
