@@ -19,7 +19,7 @@ private:
     bool flag_dataOn;
     bool flag_syncOn;
     ros::NodeHandle nh_;
-    ros::Subscriber scan_sub_1, scan_sub_2, scan_sub_3, scan_sub_4;
+    ros::Subscriber scan_sub;
 
     bool get_tf_flag, imshow;
     tf::Matrix3x3 R;
