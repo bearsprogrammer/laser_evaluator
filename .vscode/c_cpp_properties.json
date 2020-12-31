@@ -8,6 +8,7 @@
       "includePath": [
         "/home/allenkim/allen_workspace/git/laser_evaluator/devel/include",
         "/home/allenkim/allen_workspace/git/laser_evaluator/src/calibrator/include",
+        "/home/allenkim/allen_workspace/git/laser_evaluator/src/sensors/include",
         "/home/allenkim/allen_workspace/git/cona_msgs/devel/include",
         "/opt/ros/melodic/include",
         "/usr/include"

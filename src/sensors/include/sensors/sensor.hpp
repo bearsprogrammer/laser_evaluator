@@ -6,7 +6,7 @@
 #include <tf/tf.h>
 #include <tf/transform_listener.h>
 
-#include "calibrator/templete.hpp"
+#include "sensors/templete.hpp"
 
 #ifndef SENSOR_H
 #define SENSOR_H
