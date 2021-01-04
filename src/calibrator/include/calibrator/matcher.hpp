@@ -1,4 +1,5 @@
 #include <iostream>
+#include <vector> 
 #include <mutex>
 #include <cmath>
 #include <opencv2/opencv.hpp>
@@ -9,8 +10,13 @@
 #include <tf/transform_broadcaster.h>
 
 #include "calibrator/templete.hpp"
+#include "calibrator/parameter.hpp"
+#include "calibrator/sensor.hpp"
 
-typedef std::vector<allen::LaserPointCloud> bag_type;
+#define SENSORNUM 4
+#define SRCFRAME 3
+
+using bag_t = std::vector<allen::LaserPointCloud>;
 
 class matcher
 {
@@ -19,7 +25,7 @@ private:
     bool flag_dataOn;
     bool flag_syncOn;
     ros::NodeHandle nh_;
-    ros::Subscriber scan_sub;
+    ros::Subscriber scan_1_sub_, scan_2_sub_, scan_3_sub_, scan_4_sub_;
 
     bool get_tf_flag, imshow;
     tf::Matrix3x3 R;
@@ -27,46 +33,47 @@ private:
     std::string parent_frame, child_frame;
     tf::TransformListener listener;
 
-    struct Grid_param 
-    {   
-        const int grid_row, grid_col, robot_col, robot_row;
-        float mm2pixel;
-        cv::Mat occup, free;
-        Grid_param() : grid_row(500), grid_col(500), robot_col(250), robot_row(250)
-        {
-            mm2pixel = 15.0f / 1000.0f;     //1000mm(1m) -> 50 pixel, 20mm -> 1 pixel
-            occup = cv::Mat(grid_row, grid_col, CV_8UC3, cv::Scalar(0,0,0));
-            free = cv::Mat(grid_row, grid_col, CV_8UC3, cv::Scalar(0,0,0));
-        }
-    };
-
 public:
-    std::vector<bag_type> bag_cloud_;
-    Grid_param grid;
+    std::vector<bag_t*> bag_cloud_;
+    allen::Grid_param grid;
     std::vector<allen::LaserPointCloud> pointcloud_;
-    cv::Mat Grid_plot1, Grid_plot2, Grid_plot3, Grid_plot4;
+    std::vector<sensor*> sensors;
 
 private:
     void initSubscriber();
-    bool get_tf(void);
     void scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx);
+    void get_syncData();
+    void transform(cv::Mat& from, cv::Mat& to, allen::Frame frame);
+    double getPointDist(cv::Mat& data, int idx1, int idx2);
+    void centroid(cv::Mat& target, cv::Mat& center);
+    void match(cv::flann::Index& flann_idx, cv::Mat& from, cv::Mat& to, 
+            cv::Mat& from_inlier, cv::Mat& to_inlier, double ratio, cv::Mat& draw);
+    bool run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index &flann_idx, cv::Mat &draw);
+    void getTransformation(void);
 
 public:
     matcher(ros::NodeHandle &_nh) :
         nh_(_nh),
+        imshow(true),
         flag_dataOn(false), flag_syncOn(false)
     {
         degree2radian = (double)M_PI / 180.0;
-        Grid_plot1 = cv::Mat(grid.grid_row, grid.grid_col, CV_8UC3, cv::Scalar(0,0,0));
-        Grid_plot2 = cv::Mat(grid.grid_row, grid.grid_col, CV_8UC3, cv::Scalar(0,0,0));
-        Grid_plot3 = cv::Mat(grid.grid_row, grid.grid_col, CV_8UC3, cv::Scalar(0,0,0));
-        Grid_plot4 = cv::Mat(grid.grid_row, grid.grid_col, CV_8UC3, cv::Scalar(0,0,0));
+        //add sensor
+        sensors.push_back(new sensor(0, "map", "laser1"));
+        sensors.push_back(new sensor(1, "map", "laser2"));
+        sensors.push_back(new sensor(2, "map", "laser3"));
+        sensors.push_back(new sensor(3, "map", "laser4"));
+
         initSubscriber();
     }
     ~matcher()
     {
-        ROS_ERROR("Destroy function of matcher..");
+        std::vector<sensor*>::iterator it_sensor;
+        std::vector<bag_t*>::iterator it_bag;
+        for(it_sensor=sensors.begin(); it_sensor!=sensors.end(); it_sensor++)
+            delete *it_sensor;
+        for(it_bag=bag_cloud_.begin(); it_bag!=bag_cloud_.end(); it_bag++)
+            delete *it_bag;
     }
-    void add_pointcloud(bag_type &_src);
     void runLoop();
 };
