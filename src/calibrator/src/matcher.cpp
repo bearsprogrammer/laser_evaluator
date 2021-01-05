@@ -49,7 +49,8 @@ void matcher::scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx
 
         if(std::isinf(tf_tmp_pt.x) || std::isinf(tf_tmp_pt.y))	continue;
 
-        cv::Point2f tf_grid_pt; tf_grid_pt.x = grid.robot_col - tf_tmp_pt.y * grid.mm2pixel;
+        cv::Point2f tf_grid_pt; 
+        tf_grid_pt.x = grid.robot_col - tf_tmp_pt.y * grid.mm2pixel;
         tf_grid_pt.y = grid.robot_row - tf_tmp_pt.x * grid.mm2pixel;
 
         if(imshow)
@@ -523,11 +524,17 @@ void matcher::getTransformation(void)
     {
         if(i == SRCFRAME)   continue;
         int dst_frame_size = (int)sensors[i]->pointcloud.size();
+        std::vector<cv::Point2f> tmp_src = sensors[SRCFRAME]->cvtFloat(sensors[SRCFRAME]->pointcloud);
+        //std::vector<cv::Point2f> tmp_dst = sensors[i]->cvtFloat(sensors[i]->pointcloud);
+        std::vector<cv::Point2f> tmp_dst = sensors[0]->cvtFloat(sensors[0]->pointcloud);
+
+        if((int)tmp_src.size() < 10 || (int)tmp_dst.size() < 10)    continue;
 
         draw = cv::Mat(grid.grid_row, grid.grid_col, CV_8UC3, cv::Scalar(255,255,255));
-        src_frame = cv::Mat(src_frame_size, 2, CV_32FC1, sensors[SRCFRAME]->pointcloud.data());     //from
-        dst_frame = cv::Mat(dst_frame_size, 2, CV_32FC1, sensors[i]->pointcloud.data());        //to
+        src_frame = cv::Mat(src_frame_size, 2, CV_32FC1, tmp_src.data());     //from
+        dst_frame = cv::Mat(dst_frame_size, 2, CV_32FC1, tmp_dst.data());        //to
         cv::flann::Index flann_idx(dst_frame, cv::flann::KDTreeIndexParams(), cvflann::FLANN_DIST_EUCLIDEAN);
+        //cv::imshow("draw", draw);
 
         allen::Frame tmp_output;
         bool success = run(src_frame, dst_frame, tmp_output, flann_idx, draw);

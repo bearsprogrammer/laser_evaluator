@@ -5,7 +5,7 @@
 
 	<!-- 2020-12-24 -->
 	<!-- 4 yd-G4 lidar for evaluation -->>
-	<node pkg="calibrator" type="calibrator" name="calibrator" output="screen">
-	</node>
+	<!-- node pkg="calibrator" type="calibrator" name="calibrator" output="screen" -->
+	<!-- /node -->
 
 </launch>

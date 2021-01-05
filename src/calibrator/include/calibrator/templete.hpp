@@ -3,7 +3,7 @@
 namespace allen
 {
     class LaserPointCloud
-    {
+    { 
     public:
         ros::Time laser_stamp_;
         float angle;

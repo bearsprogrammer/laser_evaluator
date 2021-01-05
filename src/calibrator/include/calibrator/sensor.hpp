@@ -12,6 +12,7 @@
 
 #ifndef SENSOR_H
 #define SENSOR_H
+using bag_t = std::vector<allen::LaserPointCloud>;
 class sensor
 {
 public:
@@ -25,7 +26,7 @@ public:
     std::mutex mtx_scan;
     //allen objects
     allen::Grid_param grid;
-    std::vector<allen::LaserPointCloud> pointcloud;
+    bag_t pointcloud;
 
 public:
     bool get_tf()
@@ -56,6 +57,17 @@ public:
         ROS_INFO("success to get tf[%s]", child_frame.c_str());
         return 1; 
     }
+    std::vector<cv::Point2f> cvtFloat(bag_t &_src)
+    {
+        std::vector<cv::Point2f> output;
+        for(int i = 0; i < (int)_src.size(); i++)
+        {
+            cv::Point2f tmp_pt = _src[i].laser_coordinate_;
+            output.push_back(tmp_pt);
+        }
+        return output;
+    }
+
     sensor(int _idx, std::string _parent_frame, std::string _child_frame)  :
         get_tf_flag(false),
         sensor_idx(_idx),
