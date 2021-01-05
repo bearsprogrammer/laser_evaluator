@@ -38,6 +38,7 @@ public:
     allen::Grid_param grid;
     std::vector<allen::LaserPointCloud> pointcloud_;
     std::vector<sensor*> sensors;
+    std::vector<allen::Frame> output_frames;
 
 private:
     void initSubscriber();
@@ -50,6 +51,7 @@ private:
             cv::Mat& from_inlier, cv::Mat& to_inlier, double ratio, cv::Mat& draw);
     bool run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index &flann_idx, cv::Mat &draw);
     void getTransformation(void);
+    void calib_Frames(std::vector<allen::Frame> &_output_frames);
 
 public:
     matcher(ros::NodeHandle &_nh) :

@@ -396,16 +396,16 @@ bool matcher::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::I
 		cv::Mat from_inlier, to_inlier;
 		match(flann_idx, points, to, from_inlier, to_inlier, ratio, matching_draw);
 
-		if(!matching_draw.empty())
-		{
-			cv::putText(matching_draw, 
-				cv::format("iter: %d x: %.5lf y: %.5lf th: %.5lf", 
-					iter, output.x, output.y, output.th), 
-				cv::Point(15, 25), 0, 0.5, cv::Scalar(0, 0, 0)
-			);
-			bool success = cv::imwrite(cv::format("/home/allenkim/log/eval/%lf.jpg", 
-				ros::Time::now().toSec()), matching_draw);
-		}
+		//if(!matching_draw.empty())
+		//{
+			//cv::putText(matching_draw, 
+				//cv::format("iter: %d x: %.5lf y: %.5lf th: %.5lf", 
+					//iter, output.x, output.y, output.th), 
+				//cv::Point(15, 25), 0, 0.5, cv::Scalar(0, 0, 0)
+			//);
+			//bool success = cv::imwrite(cv::format("/home/allenkim/log/eval/%lf.jpg", 
+				//ros::Time::now().toSec()), matching_draw);
+		//}
 
 		if(from_inlier.rows <= 10 || to_inlier.rows <= 10)
 		{
@@ -519,16 +519,17 @@ void matcher::getTransformation(void)
 {
     cv::Mat src_frame, dst_frame, draw;
     int src_frame_size = (int)sensors[SRCFRAME]->pointcloud.size();
+    std::vector<allen::Frame> tmp_Frames;
 
     for(int i = 0; i < SENSORNUM; i++)      //other sensors -> dst
     {
         if(i == SRCFRAME)   continue;
         int dst_frame_size = (int)sensors[i]->pointcloud.size();
         std::vector<cv::Point2f> tmp_src = sensors[SRCFRAME]->cvtFloat(sensors[SRCFRAME]->pointcloud);
-        //std::vector<cv::Point2f> tmp_dst = sensors[i]->cvtFloat(sensors[i]->pointcloud);
-        std::vector<cv::Point2f> tmp_dst = sensors[0]->cvtFloat(sensors[0]->pointcloud);
+        std::vector<cv::Point2f> tmp_dst = sensors[i]->cvtFloat(sensors[i]->pointcloud);
+        //std::vector<cv::Point2f> tmp_dst = sensors[0]->cvtFloat(sensors[0]->pointcloud);
 
-        if((int)tmp_src.size() < 10 || (int)tmp_dst.size() < 10)    continue;
+        if((int)tmp_src.size() < 100 || (int)tmp_dst.size() < 100)    continue;
 
         draw = cv::Mat(grid.grid_row, grid.grid_col, CV_8UC3, cv::Scalar(255,255,255));
         src_frame = cv::Mat(src_frame_size, 2, CV_32FC1, tmp_src.data());     //from
@@ -538,11 +539,23 @@ void matcher::getTransformation(void)
 
         allen::Frame tmp_output;
         bool success = run(src_frame, dst_frame, tmp_output, flann_idx, draw);
+        printf("output[%d]-> x: %lf, y: %lf, th: %f\n", i, tmp_output.x, tmp_output.y, tmp_output.th);
+        tmp_Frames.push_back(tmp_output);
 
         if(src_frame.rows < 2 || dst_frame.rows < 2)    return;
     }
+    std::cout << std::endl;
 
+    output_frames.swap(tmp_Frames);
 
+}
+void matcher::calib_Frames(std::vector<allen::Frame> &_output_frames)
+{
+    if((int)output_frames.size() != SENSORNUM-1)
+    {
+
+        return;
+    }
 }
 void matcher::get_syncData()
 {
@@ -577,6 +590,7 @@ void matcher::runLoop()
         if(flag_dataOn)
         {
             getTransformation();
+            calib_Frames(output_frames);
         }
 
         //display
