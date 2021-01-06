@@ -27,6 +27,7 @@ public:
     //allen objects
     allen::Grid_param grid;
     bag_t pointcloud;
+    cv::Scalar pointcolor;
 
 public:
     bool get_tf()

@@ -52,6 +52,7 @@ private:
     bool run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index &flann_idx, cv::Mat &draw);
     void getTransformation(void);
     void calib_Frames(std::vector<allen::Frame> &_output_frames);
+    void display_assembledData(void);
 
 public:
     matcher(ros::NodeHandle &_nh) :

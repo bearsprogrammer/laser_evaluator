@@ -529,8 +529,6 @@ void matcher::getTransformation(void)
         std::vector<cv::Point2f> tmp_dst = sensors[i]->cvtFloat(sensors[i]->pointcloud);
         //std::vector<cv::Point2f> tmp_dst = sensors[0]->cvtFloat(sensors[0]->pointcloud);
 
-        if((int)tmp_src.size() < 100 || (int)tmp_dst.size() < 100)    continue;
-
         draw = cv::Mat(grid.grid_row, grid.grid_col, CV_8UC3, cv::Scalar(255,255,255));
         src_frame = cv::Mat(src_frame_size, 2, CV_32FC1, tmp_src.data());     //from
         dst_frame = cv::Mat(dst_frame_size, 2, CV_32FC1, tmp_dst.data());        //to
@@ -540,7 +538,9 @@ void matcher::getTransformation(void)
         allen::Frame tmp_output;
         bool success = run(src_frame, dst_frame, tmp_output, flann_idx, draw);
         printf("output[%d]-> x: %lf, y: %lf, th: %f\n", i, tmp_output.x, tmp_output.y, tmp_output.th);
-        tmp_Frames.push_back(tmp_output);
+
+        if(success)
+            tmp_Frames.push_back(tmp_output);
 
         if(src_frame.rows < 2 || dst_frame.rows < 2)    return;
     }
@@ -551,11 +551,25 @@ void matcher::getTransformation(void)
 }
 void matcher::calib_Frames(std::vector<allen::Frame> &_output_frames)
 {
-    if((int)output_frames.size() != SENSORNUM-1)
+    if((int)_output_frames.size() != SENSORNUM-1)
     {
-
+        ROS_ERROR("[matcher]Not enough transformation(%d/%d)", (int)_output_frames.size(), SENSORNUM-1);
         return;
     }
+
+    for(int i = 0; i < (int)_output_frames.size(); i++)
+    {
+        allen::Frame tmp_tf = _output_frames[i];
+        printf("[%d]-> %lf, %lf, %lf\n", i, tmp_tf.x, tmp_tf.y, tmp_tf.th);
+
+    }
+
+}
+void matcher::display_assembledData(void)
+{
+    if((int)sensors.size() == 0)    return;
+    cv::Mat Canvas(grid.grid_row, grid.grid_col, CV_8UC3, cv::Scalar(0,0,0));
+
 }
 void matcher::get_syncData()
 {
