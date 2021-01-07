@@ -32,6 +32,7 @@ void matcher::scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx
             continue;
         allen::LaserPointCloud temp_lpc;
 
+        val *= scale_factor[idx];
         float angle = angle_min + angle_increment * (float)i;
         float x = cos(angle) * val;     //get x, y from vector
         float y = sin(angle) * val;
@@ -49,12 +50,12 @@ void matcher::scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx
 
         if(std::isinf(tf_tmp_pt.x) || std::isinf(tf_tmp_pt.y))	continue;
 
-        cv::Point2f tf_grid_pt; 
-        tf_grid_pt.x = grid.robot_col - tf_tmp_pt.y * grid.mm2pixel;
-        tf_grid_pt.y = grid.robot_row - tf_tmp_pt.x * grid.mm2pixel;
-
         if(imshow)
         {
+            cv::Point2f tf_grid_pt; 
+            tf_grid_pt.x = grid.robot_col - tf_tmp_pt.y * grid.mm2pixel;
+            tf_grid_pt.y = grid.robot_row - tf_tmp_pt.x * grid.mm2pixel;
+
             cv::circle(tmp_grid.occup, tf_grid_pt, 5, cv::Scalar(255, 255, 255), -1);
             cv::line(tmp_grid.free, cv::Point2f(tmp_grid.robot_col, tmp_grid.robot_row), tf_grid_pt, cv::Scalar(255,255,255), 2);
         }
@@ -396,16 +397,16 @@ bool matcher::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::I
 		cv::Mat from_inlier, to_inlier;
 		match(flann_idx, points, to, from_inlier, to_inlier, ratio, matching_draw);
 
-		//if(!matching_draw.empty())
-		//{
-			//cv::putText(matching_draw, 
-				//cv::format("iter: %d x: %.5lf y: %.5lf th: %.5lf", 
-					//iter, output.x, output.y, output.th), 
-				//cv::Point(15, 25), 0, 0.5, cv::Scalar(0, 0, 0)
-			//);
-			//bool success = cv::imwrite(cv::format("/home/allenkim/log/eval/%lf.jpg", 
-				//ros::Time::now().toSec()), matching_draw);
-		//}
+		if(!matching_draw.empty())
+		{
+			cv::putText(matching_draw, 
+				cv::format("iter: %d x: %.5lf y: %.5lf th: %.5lf", 
+					iter, output.x, output.y, output.th), 
+				cv::Point(15, 25), 0, 0.5, cv::Scalar(0, 0, 0)
+			);
+			bool success = cv::imwrite(cv::format("/home/allenkim/log/eval/%lf.jpg", 
+				ros::Time::now().toSec()), matching_draw);
+		}
 
 		if(from_inlier.rows <= 10 || to_inlier.rows <= 10)
 		{
@@ -544,12 +545,12 @@ void matcher::getTransformation(void)
 
         if(src_frame.rows < 2 || dst_frame.rows < 2)    return;
     }
-    std::cout << std::endl;
+    //std::cout << std::endl;
 
     output_frames.swap(tmp_Frames);
 
 }
-void matcher::calib_Frames(std::vector<allen::Frame> &_output_frames)
+void matcher::calibrate_Frames(std::vector<allen::Frame> &_output_frames)
 {
     if((int)_output_frames.size() != SENSORNUM-1)
     {
@@ -565,11 +566,54 @@ void matcher::calib_Frames(std::vector<allen::Frame> &_output_frames)
     }
 
 }
-void matcher::display_assembledData(void)
+void matcher::display_Globalmap(void)
 {
+    if(!imshow)                     return;
     if((int)sensors.size() == 0)    return;
-    cv::Mat Canvas(grid.grid_row, grid.grid_col, CV_8UC3, cv::Scalar(0,0,0));
 
+    allen::Grid_param grid_global;
+    cv::Mat Canvas(grid_global.grid_row, grid_global.grid_col, CV_8UC3, cv::Scalar(0,0,0));
+
+    float margin_grid = 300.0f;
+
+    grid_global.base_pt.push_back(cv::Point2f(margin_grid, margin_grid));
+    grid_global.base_pt.push_back(cv::Point2f(margin_grid, (float)grid_global.grid_row-margin_grid));
+    grid_global.base_pt.push_back(cv::Point2f((float)grid_global.grid_col-margin_grid, margin_grid));
+    grid_global.base_pt.push_back(cv::Point2f((float)grid_global.grid_col-margin_grid, (float)grid_global.grid_row-margin_grid));
+
+    cv::Point2f tmp_base_pt = grid_global.base_pt[SRCFRAME];
+
+    for(int i = 0; i < (int)sensors.size(); i++)
+    {
+        bag_t tmp_pointcloud = sensors[i]->pointcloud;
+        cv::Scalar tmp_scalar;
+        if(i == SRCFRAME)
+            tmp_scalar = cv::Scalar(0,255,0);   //green
+        else
+            tmp_scalar = sensors[i]->pointcolor;
+        //cv::Point2f tmp_base_pt = grid_global.base_pt[i];
+        //if(i == 0 || i == 2)    continue;
+
+        for(int j = 0; j < (int)tmp_pointcloud.size(); j++)
+        {
+            allen::LaserPointCloud tmp_lpc = tmp_pointcloud[j];
+            cv::Point2f tmp_pt_mm = tmp_lpc.laser_coordinate_ * 1000.0f;     //m to mm
+            if(std::isinf(tmp_pt_mm.x) || std::isinf(tmp_pt_mm.y))  continue;
+            cv::Point2f tmp_pt_grid;
+            tmp_pt_grid.x = tmp_base_pt.x - tmp_pt_mm.y * grid_global.mm2pixel;
+            tmp_pt_grid.y = tmp_base_pt.y - tmp_pt_mm.x * grid_global.mm2pixel;
+            //tmp_pt_grid.x = grid_global.robot_col - tmp_pt_mm.y * grid_global.mm2pixel;
+            //tmp_pt_grid.y = grid_global.robot_row - tmp_pt_mm.x * grid_global.mm2pixel;
+
+            cv::circle(Canvas, tmp_pt_grid, 5, tmp_scalar, -1);
+        }
+    }
+    cv::line(Canvas, cv::Point(0, tmp_base_pt.y), 
+                        cv::Point(grid_global.grid_col, tmp_base_pt.y), cv::Scalar(0,0,255));
+    cv::line(Canvas, cv::Point(tmp_base_pt.x, 0), 
+                        cv::Point(tmp_base_pt.x, grid_global.grid_row), cv::Scalar(0,0,255));
+    //cv::imshow("Canvas", Canvas);
+    Globalmap = Canvas.clone();
 }
 void matcher::get_syncData()
 {
@@ -604,12 +648,14 @@ void matcher::runLoop()
         if(flag_dataOn)
         {
             getTransformation();
-            calib_Frames(output_frames);
+            calibrate_Frames(output_frames);
+            display_Globalmap();
         }
 
         //display
         for(int i = 0; i < (int)sensors.size(); i++)
             cv::imshow(sensors[i]->child_frame, sensors[i]->Grid_local);
+        cv::imshow("Globalmap", Globalmap);
         cv::waitKey(10);
 
         ros::spinOnce();

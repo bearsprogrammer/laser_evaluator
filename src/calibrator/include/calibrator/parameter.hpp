@@ -12,6 +12,7 @@ namespace allen
     public:
         const int grid_row, grid_col;
         int robot_col, robot_row;
+        std::vector<cv::Point2f> base_pt;
         float mm2pixel;
         cv::Mat occup, free;
 

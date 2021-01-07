@@ -1,0 +1,36 @@
+<!-- Update: 2021-01-06 --> 
+<!-- urdf --> 
+<!-- rosrun robot_state_publisher robot_state_publisher ydlidar_test.urdf -->
+<robot name="ydlidarG4">
+
+    <link name="map"/>
+    <link name="laser_frame_1"/>
+    <link name="laser_frame_2"/>
+    <link name="laser_frame_3"/>
+    <link name="laser_frame_4"/>
+
+    <joint name="map2laser1" type="fixed">
+        <parent link="map"/>
+        <child link="laser_frame_1"/>
+        <origin xyz="0 0 0" rpy="0 0 -0.09" />
+    </joint>
+
+    <joint name="map2laser2" type="fixed">
+        <parent link="map"/>
+        <child link="laser_frame_2"/>
+        <origin xyz="0 0 0" rpy="0 0 -0.04" />
+    </joint>
+
+    <joint name="map2laser3" type="fixed">
+        <parent link="map"/>
+        <child link="laser_frame_3"/>
+        <origin xyz="0 0 0" rpy="0 0 -0.06" />
+    </joint>
+
+    <joint name="map2laser4" type="fixed">
+        <parent link="map"/>
+        <child link="laser_frame_4"/>
+        <origin xyz="0 0 0" rpy="0 0 -0.095" />
+    </joint>
+
+</robot>
