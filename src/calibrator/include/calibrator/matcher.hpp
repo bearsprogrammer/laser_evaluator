@@ -14,7 +14,7 @@
 #include "calibrator/sensor.hpp"
 
 #define SENSORNUM 4
-#define SRCFRAME 0
+#define SRCFRAME 1 
 
 using bag_t = std::vector<allen::LaserPointCloud>;
 

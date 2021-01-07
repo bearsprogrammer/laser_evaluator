@@ -391,8 +391,7 @@ bool matcher::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::I
 
 	for(; iter<50; iter++)
 	{
-		matching_draw = cv::Mat(1, 500, CV_8UC3, cv::Scalar(255, 255, 255));
-
+		matching_draw = cv::Mat(1, 500, CV_8UC3, cv::Scalar(255, 255, 255)); 
 		transform(from, points, output);
 		cv::Mat from_inlier, to_inlier;
 		match(flann_idx, points, to, from_inlier, to_inlier, ratio, matching_draw);
@@ -521,6 +520,8 @@ void matcher::getTransformation(void)
     cv::Mat src_frame, dst_frame, draw;
     int src_frame_size = (int)sensors[SRCFRAME]->pointcloud.size();
     std::vector<allen::Frame> tmp_Frames;
+    for(int i = 0; i < SENSORNUM; i++)
+        tmp_Frames.push_back(allen::Frame(999.0, 999.0, 999.0));
 
     for(int i = 0; i < SENSORNUM; i++)      //other sensors -> dst
     {
@@ -541,7 +542,7 @@ void matcher::getTransformation(void)
         printf("output[%d]-> x: %lf, y: %lf, th: %f\n", i, tmp_output.x, tmp_output.y, tmp_output.th);
 
         if(success)
-            tmp_Frames.push_back(tmp_output);
+            tmp_Frames[i] = tmp_output;
 
         if(src_frame.rows < 2 || dst_frame.rows < 2)    return;
     }
@@ -552,6 +553,7 @@ void matcher::getTransformation(void)
 }
 void matcher::calibrate_Frames(std::vector<allen::Frame> &_output_frames)
 {
+    //TODO: check constrain
     if((int)_output_frames.size() != SENSORNUM-1)
     {
         ROS_ERROR("[matcher]Not enough transformation(%d/%d)", (int)_output_frames.size(), SENSORNUM-1);
