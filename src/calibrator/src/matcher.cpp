@@ -573,7 +573,6 @@ void matcher::calibrate_Frames(std::vector<allen::Frame> &_output_frames)
         tmp_tf.x *= -1;
 
         printf("[%d]-> %lf, %lf, %lf\n", i, tmp_tf.x, tmp_tf.y, tmp_tf.th);
-        if(i == SENSORNUM)  continue;
 
         int size = (int)sensors[i]->pointcloud.size();
         bag_t tmp_calibrated_cloud;
@@ -583,10 +582,24 @@ void matcher::calibrate_Frames(std::vector<allen::Frame> &_output_frames)
         {
             float x = sensors[i]->pointcloud[j].laser_coordinate_.x;
             float y = sensors[i]->pointcloud[j].laser_coordinate_.y;
+            float n_x, x_y;
             printf("[before]-> x: %f, y: %f\n", x, y);
-            float n_x = x * cos(tmp_tf.th) -  y * sin(tmp_tf.th) + tmp_tf.x;
-            float n_y = x * sin(tmp_tf.th) + y * cos(tmp_tf.th) + tmp_tf.y;
+            
+            allen::LaserPointCloud tmp_lpc;
+            tmp_lpc.laser_stamp_ = sensors[i]->pointcloud[j].laser_stamp_;
+            tmp_lpc.angle = sensors[i]->pointcloud[j].angle;
+
+            if(i == SRCFRAME)
+                tmp_lpc.laser_coordinate_ = cv::Point2f(x, y);
+            else
+            {
+                n_x = x * cos(tmp_tf.th) -  y * sin(tmp_tf.th) + tmp_tf.x;
+                n_y = x * sin(tmp_tf.th) + y * cos(tmp_tf.th) + tmp_tf.y;
+                tmp_lpc.laser_coordinate_ = cv::Point2f(n_x, n_y);
+            }
+
             printf("[after]-> x: %f, y: %f\n", n_x, n_y);
+            tmp_calibrated_cloud.push_back(tmp_lpc);
 
             //tf::Vector3 p(x, y, 1);
             //tf::Matrix3x3 tmp_R(0);
@@ -601,6 +614,7 @@ void matcher::calibrate_Frames(std::vector<allen::Frame> &_output_frames)
 
         }
         std::cout << std::endl;
+        sensors[i]->calibrated_pointcloud.swap(tmp_calibrated_cloud);
     }
 
 }

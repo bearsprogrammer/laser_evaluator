@@ -27,6 +27,7 @@ public:
     //allen objects
     allen::Grid_param grid;
     bag_t pointcloud;
+    bag_t calibrated_pointcloud;
     cv::Scalar pointcolor;
 
 public:
