@@ -570,6 +570,8 @@ void matcher::calibrate_Frames(std::vector<allen::Frame> &_output_frames)
     for(int i = 0; i < (int)_output_frames.size(); i++)
     {
         allen::Frame tmp_tf = _output_frames[i];
+        tmp_tf.x *= -1;
+
         printf("[%d]-> %lf, %lf, %lf\n", i, tmp_tf.x, tmp_tf.y, tmp_tf.th);
         if(i == SENSORNUM)  continue;
 
@@ -581,8 +583,24 @@ void matcher::calibrate_Frames(std::vector<allen::Frame> &_output_frames)
         {
             float x = sensors[i]->pointcloud[j].laser_coordinate_.x;
             float y = sensors[i]->pointcloud[j].laser_coordinate_.y;
-            tf::Vector3 p(x, y, 0);
+            printf("[before]-> x: %f, y: %f\n", x, y);
+            float n_x = x * cos(tmp_tf.th) -  y * sin(tmp_tf.th) + tmp_tf.x;
+            float n_y = x * sin(tmp_tf.th) + y * cos(tmp_tf.th) + tmp_tf.y;
+            printf("[after]-> x: %f, y: %f\n", n_x, n_y);
+
+            //tf::Vector3 p(x, y, 1);
+            //tf::Matrix3x3 tmp_R(0);
+            //tmp_R.at<float>(0, 0) = cos(tmp_tf.th);
+            //tmp_R.at<float>(0, 1) = -sin(tmp_tf.th);
+            //tmp_R.at<float>(1, 0) = sin(tmp_tf.th);
+            //tmp_R.at<float>(1, 1) = cos(tmp_tf.th);
+            //tmp_R.at<float>(0, 2) = tmp_tf.x;
+            //tmp_R.at<float>(1, 2) = tmp_tf.y;
+            //tmp_R.at<float>(2, 2) = 1.0;
+            //tf::vector3 new_p = tmp_R * p;
+
         }
+        std::cout << std::endl;
     }
 
 }
