@@ -522,7 +522,7 @@ void matcher::getTransformation(void)
     std::vector<allen::Frame> tmp_Frames;
     for(int i = 0; i < SENSORNUM; i++)
         tmp_Frames.push_back(allen::Frame(999.0, 999.0, 999.0));
-
+    int count = 0;
     for(int i = 0; i < SENSORNUM; i++)      //other sensors -> dst
     {
         if(i == SRCFRAME)   continue;
@@ -542,19 +542,26 @@ void matcher::getTransformation(void)
         printf("output[%d]-> x: %lf, y: %lf, th: %f\n", i, tmp_output.x, tmp_output.y, tmp_output.th);
 
         if(success)
+        {
             tmp_Frames[i] = tmp_output;
+            count++;
+        }
 
-        if(src_frame.rows < 2 || dst_frame.rows < 2)    return;
+        if(src_frame.rows < 2 || dst_frame.rows < 2)    
+        {
+            flag_calibOn = false;
+            return;
+        }
     }
-    //std::cout << std::endl;
+    std::cout << std::endl;
 
     output_frames.swap(tmp_Frames);
-
+    if(count == SENSORNUM-1)    flag_calibOn = true;
+    else                        flag_calibOn = false;
 }
 void matcher::calibrate_Frames(std::vector<allen::Frame> &_output_frames)
 {
-    //TODO: check constrain
-    if((int)_output_frames.size() != SENSORNUM-1)
+    if((int)_output_frames.size() != SENSORNUM || !flag_calibOn)
     {
         ROS_ERROR("[matcher]Not enough transformation(%d/%d)", (int)_output_frames.size(), SENSORNUM-1);
         return;
@@ -564,7 +571,18 @@ void matcher::calibrate_Frames(std::vector<allen::Frame> &_output_frames)
     {
         allen::Frame tmp_tf = _output_frames[i];
         printf("[%d]-> %lf, %lf, %lf\n", i, tmp_tf.x, tmp_tf.y, tmp_tf.th);
+        if(i == SENSORNUM)  continue;
 
+        int size = (int)sensors[i]->pointcloud.size();
+        bag_t tmp_calibrated_cloud;
+        tmp_calibrated_cloud.reserve(size);
+
+        for(int j = 0; j < size; j++)
+        {
+            float x = sensors[i]->pointcloud[j].laser_coordinate_.x;
+            float y = sensors[i]->pointcloud[j].laser_coordinate_.y;
+            tf::Vector3 p(x, y, 0);
+        }
     }
 
 }
@@ -619,11 +637,9 @@ void matcher::display_Globalmap(void)
 }
 void matcher::get_syncData()
 {
+    flag_dataOn = false;
     for(int i = 0; i < (int)sensors.size(); i++)
-    {
         if(sensors[i]->pointcloud.size() == 0)  return;
-        flag_dataOn = false;
-    }
 
     std::vector<bag_t*> tmp_bag_cloud;
     for(int i = 0; i < (int)sensors.size(); i++)

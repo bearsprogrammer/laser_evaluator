@@ -23,7 +23,7 @@ class matcher
 private:
     double degree2radian;
     bool flag_dataOn;
-    bool flag_syncOn;
+    bool flag_calibOn;
     ros::NodeHandle nh_;
     ros::Subscriber scan_1_sub_, scan_2_sub_, scan_3_sub_, scan_4_sub_;
     cv::RNG rng;
@@ -61,7 +61,7 @@ public:
     matcher(ros::NodeHandle &_nh) :
         nh_(_nh),
         imshow(true),
-        flag_dataOn(false), flag_syncOn(false)
+        flag_dataOn(false), flag_calibOn(false)
     {
         degree2radian = (double)M_PI / 180.0;
         rng = cv::RNG(cv::getTickCount());
