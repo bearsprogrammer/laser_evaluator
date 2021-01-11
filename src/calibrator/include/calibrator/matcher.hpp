@@ -22,8 +22,11 @@ class matcher
 {
 private:
     double degree2radian;
+    //flag
     bool flag_dataOn;
+    bool flag_matchOn;
     bool flag_calibOn;
+
     ros::NodeHandle nh_;
     ros::Subscriber scan_1_sub_, scan_2_sub_, scan_3_sub_, scan_4_sub_;
     cv::RNG rng;
@@ -41,7 +44,7 @@ public:
     std::vector<sensor*> sensors;
     std::vector<allen::Frame> output_frames;
     std::vector<float> scale_factor;
-    cv::Mat Globalmap;
+    cv::Mat Globalmap, Globalmap_calib;
 
 private:
     void initSubscriber();
@@ -61,7 +64,7 @@ public:
     matcher(ros::NodeHandle &_nh) :
         nh_(_nh),
         imshow(true),
-        flag_dataOn(false), flag_calibOn(false)
+        flag_dataOn(false), flag_matchOn(false), flag_calibOn(false)
     {
         degree2radian = (double)M_PI / 180.0;
         rng = cv::RNG(cv::getTickCount());
@@ -80,6 +83,7 @@ public:
         scale_factor.push_back(0.899f);
         
         Globalmap = cv::Mat(grid.grid_row, grid.grid_row, CV_8UC3, cv::Scalar(0,0,0));
+        Globalmap_calib = cv::Mat(grid.grid_row, grid.grid_row, CV_8UC3, cv::Scalar(0,0,0));
 
         initSubscriber();
     }

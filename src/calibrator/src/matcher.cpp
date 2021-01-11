@@ -403,7 +403,7 @@ bool matcher::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::I
 					iter, output.x, output.y, output.th), 
 				cv::Point(15, 25), 0, 0.5, cv::Scalar(0, 0, 0)
 			);
-			bool success = cv::imwrite(cv::format("/home/allenkim/log/eval/%lf.jpg", 
+			bool success = cv::imwrite(cv::format("/home/allenkim/log/%lf.jpg", 
 				ros::Time::now().toSec()), matching_draw);
 		}
 
@@ -534,11 +534,13 @@ void matcher::getTransformation(void)
         draw = cv::Mat(grid.grid_row, grid.grid_col, CV_8UC3, cv::Scalar(255,255,255));
         src_frame = cv::Mat(src_frame_size, 2, CV_32FC1, tmp_src.data());     //from
         dst_frame = cv::Mat(dst_frame_size, 2, CV_32FC1, tmp_dst.data());        //to
-        cv::flann::Index flann_idx(dst_frame, cv::flann::KDTreeIndexParams(), cvflann::FLANN_DIST_EUCLIDEAN);
+        //cv::flann::Index flann_idx(dst_frame, cv::flann::KDTreeIndexParams(), cvflann::FLANN_DIST_EUCLIDEAN);
+        cv::flann::Index flann_idx(src_frame, cv::flann::KDTreeIndexParams(), cvflann::FLANN_DIST_EUCLIDEAN);
         //cv::imshow("draw", draw);
 
         allen::Frame tmp_output;
-        bool success = run(src_frame, dst_frame, tmp_output, flann_idx, draw);
+        //bool success = run(src_frame, dst_frame, tmp_output, flann_idx, draw);
+        bool success = run(dst_frame, src_frame, tmp_output, flann_idx, draw);
         printf("output[%d]-> x: %lf, y: %lf, th: %f\n", i, tmp_output.x, tmp_output.y, tmp_output.th);
 
         if(success)
@@ -549,19 +551,19 @@ void matcher::getTransformation(void)
 
         if(src_frame.rows < 2 || dst_frame.rows < 2)    
         {
-            flag_calibOn = false;
+            flag_matchOn = false;
             return;
         }
     }
     std::cout << std::endl;
 
     output_frames.swap(tmp_Frames);
-    if(count == SENSORNUM-1)    flag_calibOn = true;
-    else                        flag_calibOn = false;
+    if(count == SENSORNUM-1)    flag_matchOn = true;
+    else                        flag_matchOn = false;
 }
 void matcher::calibrate_Frames(std::vector<allen::Frame> &_output_frames)
 {
-    if((int)_output_frames.size() != SENSORNUM || !flag_calibOn)
+    if((int)_output_frames.size() != SENSORNUM || !flag_matchOn)
     {
         ROS_ERROR("[matcher]Not enough transformation(%d/%d)", (int)_output_frames.size(), SENSORNUM-1);
         return;
@@ -570,9 +572,9 @@ void matcher::calibrate_Frames(std::vector<allen::Frame> &_output_frames)
     for(int i = 0; i < (int)_output_frames.size(); i++)
     {
         allen::Frame tmp_tf = _output_frames[i];
-        tmp_tf.x *= -1;
 
         printf("[%d]-> %lf, %lf, %lf\n", i, tmp_tf.x, tmp_tf.y, tmp_tf.th);
+        float d2r = tmp_tf.th * degree2radian;
 
         int size = (int)sensors[i]->pointcloud.size();
         bag_t tmp_calibrated_cloud;
@@ -582,8 +584,8 @@ void matcher::calibrate_Frames(std::vector<allen::Frame> &_output_frames)
         {
             float x = sensors[i]->pointcloud[j].laser_coordinate_.x;
             float y = sensors[i]->pointcloud[j].laser_coordinate_.y;
-            float n_x, x_y;
-            printf("[before]-> x: %f, y: %f\n", x, y);
+            float n_x, n_y;
+            //printf("[before]-> x: %f, y: %f\n", x, y);
             
             allen::LaserPointCloud tmp_lpc;
             tmp_lpc.laser_stamp_ = sensors[i]->pointcloud[j].laser_stamp_;
@@ -593,12 +595,12 @@ void matcher::calibrate_Frames(std::vector<allen::Frame> &_output_frames)
                 tmp_lpc.laser_coordinate_ = cv::Point2f(x, y);
             else
             {
-                n_x = x * cos(tmp_tf.th) -  y * sin(tmp_tf.th) + tmp_tf.x;
-                n_y = x * sin(tmp_tf.th) + y * cos(tmp_tf.th) + tmp_tf.y;
+                n_x = x * cos(d2r) -  y * sin(d2r) + tmp_tf.x;
+                n_y = x * sin(d2r) + y * cos(d2r) + tmp_tf.y;
                 tmp_lpc.laser_coordinate_ = cv::Point2f(n_x, n_y);
             }
 
-            printf("[after]-> x: %f, y: %f\n", n_x, n_y);
+            //printf("[after]-> x: %f, y: %f\n", n_x, n_y);
             tmp_calibrated_cloud.push_back(tmp_lpc);
 
             //tf::Vector3 p(x, y, 1);
@@ -617,14 +619,17 @@ void matcher::calibrate_Frames(std::vector<allen::Frame> &_output_frames)
         sensors[i]->calibrated_pointcloud.swap(tmp_calibrated_cloud);
     }
 
+    if(!flag_calibOn)
+        flag_calibOn = true;
 }
 void matcher::display_Globalmap(void)
 {
-    if(!imshow)                     return;
-    if((int)sensors.size() == 0)    return;
+    if(!imshow)                                           return;
+    if((int)sensors[SRCFRAME]->pointcloud.size() == 0)    return;
 
     allen::Grid_param grid_global;
     cv::Mat Canvas(grid_global.grid_row, grid_global.grid_col, CV_8UC3, cv::Scalar(0,0,0));
+    cv::Mat Canvas_calib(grid_global.grid_row, grid_global.grid_col, CV_8UC3, cv::Scalar(0,0,0));
 
     float margin_grid = 300.0f;
 
@@ -635,6 +640,7 @@ void matcher::display_Globalmap(void)
 
     cv::Point2f tmp_base_pt = grid_global.base_pt[SRCFRAME];
 
+    //display raw data
     for(int i = 0; i < (int)sensors.size(); i++)
     {
         bag_t tmp_pointcloud = sensors[i]->pointcloud;
@@ -664,8 +670,41 @@ void matcher::display_Globalmap(void)
                         cv::Point(grid_global.grid_col, tmp_base_pt.y), cv::Scalar(0,0,255));
     cv::line(Canvas, cv::Point(tmp_base_pt.x, 0), 
                         cv::Point(tmp_base_pt.x, grid_global.grid_row), cv::Scalar(0,0,255));
-    //cv::imshow("Canvas", Canvas);
     Globalmap = Canvas.clone();
+
+    //display calibrated laser
+    if(!flag_calibOn)   return;
+    for(int i = 0; i < (int)sensors.size(); i++)
+    {
+        bag_t tmp_pointcloud = sensors[i]->calibrated_pointcloud;
+        cv::Scalar tmp_scalar;
+        if(i == SRCFRAME)
+            tmp_scalar = cv::Scalar(0,255,0);   //green
+        else
+            tmp_scalar = sensors[i]->pointcolor;
+        //cv::Point2f tmp_base_pt = grid_global.base_pt[i];
+        //if(i == 0 || i == 2)    continue;
+
+        for(int j = 0; j < (int)tmp_pointcloud.size(); j++)
+        {
+            allen::LaserPointCloud tmp_lpc = tmp_pointcloud[j];
+            cv::Point2f tmp_pt_mm = tmp_lpc.laser_coordinate_ * 1000.0f;     //m to mm
+            if(std::isinf(tmp_pt_mm.x) || std::isinf(tmp_pt_mm.y))  continue;
+            cv::Point2f tmp_pt_grid;
+            tmp_pt_grid.x = tmp_base_pt.x - tmp_pt_mm.y * grid_global.mm2pixel;
+            tmp_pt_grid.y = tmp_base_pt.y - tmp_pt_mm.x * grid_global.mm2pixel;
+            //tmp_pt_grid.x = grid_global.robot_col - tmp_pt_mm.y * grid_global.mm2pixel;
+            //tmp_pt_grid.y = grid_global.robot_row - tmp_pt_mm.x * grid_global.mm2pixel;
+
+            cv::circle(Canvas_calib, tmp_pt_grid, 5, tmp_scalar, -1);
+        }
+    }
+    cv::line(Canvas_calib, cv::Point(0, tmp_base_pt.y), 
+                        cv::Point(grid_global.grid_col, tmp_base_pt.y), cv::Scalar(0,0,255));
+    cv::line(Canvas_calib, cv::Point(tmp_base_pt.x, 0), 
+                        cv::Point(tmp_base_pt.x, grid_global.grid_row), cv::Scalar(0,0,255));
+    Globalmap_calib = Canvas_calib.clone();
+
 }
 void matcher::get_syncData()
 {
@@ -695,17 +734,18 @@ void matcher::runLoop()
     while (ros::ok())
     {
         get_syncData();
-        if(flag_dataOn)
+        if(flag_dataOn && !flag_calibOn)
         {
             getTransformation();
             calibrate_Frames(output_frames);
-            display_Globalmap();
         }
+        display_Globalmap();
 
         //display
         for(int i = 0; i < (int)sensors.size(); i++)
             cv::imshow(sensors[i]->child_frame, sensors[i]->Grid_local);
         cv::imshow("Globalmap", Globalmap);
+        cv::imshow("Globalmap_calib", Globalmap_calib);
         cv::waitKey(10);
 
         ros::spinOnce();
