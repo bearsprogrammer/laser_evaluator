@@ -664,9 +664,7 @@ void matcher::display_Globalmap(void)
 
             cv::circle(Canvas, tmp_pt_grid, 2, tmp_scalar, -1);
         }
-    }
-    cv::line(Canvas, cv::Point(0, tmp_base_pt.y), 
-                        cv::Point(grid_global.grid_col, tmp_base_pt.y), cv::Scalar(0,0,255));
+    } cv::line(Canvas, cv::Point(0, tmp_base_pt.y), cv::Point(grid_global.grid_col, tmp_base_pt.y), cv::Scalar(0,0,255));
     cv::line(Canvas, cv::Point(tmp_base_pt.x, 0), 
                         cv::Point(tmp_base_pt.x, grid_global.grid_row), cv::Scalar(0,0,255));
     Globalmap = Canvas.clone();
@@ -718,6 +716,53 @@ void matcher::display_Globalmap(void)
     Globalmap_calib = Canvas_calib.clone();
 
 }
+void matcher::broadcastTF(std::vector<allen::Frame> &_frame)
+{
+	if(!flag_matchOn || (int)_frame.size() != SENSORNUM)	return;
+
+	//tf::TransformBroadcaster br;
+	//static tf::TransformBroadcaster br;
+
+	/// CAUTION!!!!!!!!!!!1 ///
+	/// Trouble-shooting: Do not re-definition instance(object) of tf::TransformBroadcaster ///
+	tf::Transform tf_broadcast;
+
+	for(int i = 0; i < (int)_frame.size(); i++)
+	{
+		allen::Frame tmp_output_frame;	
+		tmp_output_frame = _frame[i];			//output x, y, th
+		double radian_output = tmp_output_frame.th * degree2radian;
+
+		//from URDF
+		tf::Matrix3x3 tmp_R = sensors[i]->R;	// r, p, y
+		tf::Vector3 tmp_T = sensors[i]->T;		// x, y, z
+		tfScalar roll, pitch, yaw, X, Y, Z;
+		tmp_R.getRPY(roll, pitch, yaw);
+		X = tmp_T.getX();
+		Y = tmp_T.getY();
+		Z = tmp_T.getZ();
+
+		//printf("[before]-> rpy[%lf, %lf, %lf], xyz[%lf, %lf, %lf]\n", roll, pitch, yaw, X, Y, Z);
+		X += tmp_output_frame.x;
+		Y += tmp_output_frame.y;
+		yaw += radian_output;	
+		//printf("[after]-> rpy[%lf, %lf, %lf], xyz[%lf, %lf, %lf]\n", roll, pitch, yaw, X, Y, Z);
+
+		//feed
+		tf::Quaternion q_r;
+		q_r.setRPY(roll, pitch, yaw);
+		tf_broadcast.setOrigin(tf::Vector3(X, Y, Z));
+		tf_broadcast.setRotation(q_r);
+
+		//send
+		std::string child_frame_ = sensors[i]->child_frame + "_calib";
+		br.sendTransform(tf::StampedTransform(tf_broadcast, ros::Time::now(), sensors[i]->parent_frame, child_frame_));
+
+		ROS_INFO("SEND tf [%s][%s] to tracker node", sensors[i]->parent_frame.c_str(), child_frame_.c_str());
+		//std::cout << std::endl;
+	}
+
+}
 void matcher::get_syncData()
 {
     flag_dataOn = false;
@@ -749,8 +794,9 @@ void matcher::runLoop()
         if(flag_dataOn && !flag_calibOn)
         {
             getTransformation();
-            //calibrate_Frames(output_frames);
+			broadcastTF(output_frames);
         }
+		//broadcastTF(output_frames);
 		calibrate_Frames(output_frames);
         display_Globalmap();
 

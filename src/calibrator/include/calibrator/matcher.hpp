@@ -15,6 +15,10 @@
 
 #define SENSORNUM 4
 #define SRCFRAME 1 
+#define SCALEFACTOR_1 0.92f
+#define SCALEFACTOR_2 1.0f
+#define SCALEFACTOR_3 0.975f
+#define SCALEFACTOR_4 0.899f
 
 using bag_t = std::vector<allen::LaserPointCloud>;
 
@@ -26,16 +30,13 @@ private:
     bool flag_dataOn;
     bool flag_matchOn;
     bool flag_calibOn;
+    bool imshow;
 
     ros::NodeHandle nh_;
+    tf::TransformBroadcaster br;
+    //tf::Transform tmp_tf;
     ros::Subscriber scan_1_sub_, scan_2_sub_, scan_3_sub_, scan_4_sub_;
     cv::RNG rng;
-
-    bool get_tf_flag, imshow;
-    tf::Matrix3x3 R;
-    tf::Vector3 T;
-    std::string parent_frame, child_frame;
-    tf::TransformListener listener;
 
 public:
     std::vector<bag_t*> bag_cloud_;
@@ -59,6 +60,7 @@ private:
     void getTransformation(void);
     void calibrate_Frames(std::vector<allen::Frame> &_output_frames);
     void display_Globalmap(void);
+    void broadcastTF(std::vector<allen::Frame> &_frame);
 
 public:
     matcher(ros::NodeHandle &_nh) :
@@ -76,11 +78,12 @@ public:
 
         for(int i = 0; i < SENSORNUM; i++)
             sensors[i]->pointcolor = cv::Scalar(rng.uniform(50, 255), rng.uniform(50, 255), rng.uniform(50, 255));
-        
-        scale_factor.push_back(0.92f);
-        scale_factor.push_back(1.0f);
-        scale_factor.push_back(0.975f);
-        scale_factor.push_back(0.899f);
+
+        //set scale factor 
+        scale_factor.push_back(SCALEFACTOR_1);
+        scale_factor.push_back(SCALEFACTOR_2);
+        scale_factor.push_back(SCALEFACTOR_3);
+        scale_factor.push_back(SCALEFACTOR_4);
         
         Globalmap = cv::Mat(grid.grid_row, grid.grid_row, CV_8UC3, cv::Scalar(0,0,0));
         Globalmap_calib = cv::Mat(grid.grid_row, grid.grid_row, CV_8UC3, cv::Scalar(0,0,0));
