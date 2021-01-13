@@ -11,6 +11,7 @@ int main(int argc, char** argv)
 
 	ros::NodeHandle nh;
 	tracker tk(nh);
+	tk.runLoop();
 	
 	ros::spin();
 	return 0;

@@ -20,7 +20,8 @@
 #define SCALEFACTOR_3 0.975f
 #define SCALEFACTOR_4 0.899f
 
-using bag_t = std::vector<allen::LaserPointCloud>;
+using bag_t = std::vector<allen::LaserPointCloud>;  //pointcloud
+//using sensor_t = std::vector<sensor>;  //pointcloud
 
 class matcher
 {

@@ -1,6 +1,6 @@
 #include "tracker/tracker.hpp"
 
-void tracker::initSubscriber()
+void tracker::initSubscriber(void)
 {
     scan_1_sub_ = nh_.subscribe<sensor_msgs::LaserScan>("/scan_1", 10, boost::bind(&tracker::scan_callback, this, _1, 0));
     scan_2_sub_ = nh_.subscribe<sensor_msgs::LaserScan>("/scan_2", 10, boost::bind(&tracker::scan_callback, this, _1, 1));
@@ -76,5 +76,102 @@ void tracker::scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx
         sensors[idx]->Grid_local = Grid.clone();
         //ROS_INFO("[%s]Grid->rows: %d", sensors[idx]->child_frame.c_str(), sensors[idx]->Grid_local.rows);
     }
+}
+void tracker::display_Globalmap(void)
+{
+    if(!imshow)                                           return;
+    if((int)sensors[SRCFRAME]->pointcloud.size() == 0)    return;
+
+    allen::Grid_param grid_global;
+    cv::Mat Canvas(grid_global.grid_row, grid_global.grid_col, CV_8UC3, cv::Scalar(0,0,0));
+
+    float margin_grid = 300.0f;
+
+    grid_global.base_pt.push_back(cv::Point2f(margin_grid, margin_grid));
+    grid_global.base_pt.push_back(cv::Point2f(margin_grid, (float)grid_global.grid_row-margin_grid));
+    grid_global.base_pt.push_back(cv::Point2f((float)grid_global.grid_col-margin_grid, margin_grid));
+    grid_global.base_pt.push_back(cv::Point2f((float)grid_global.grid_col-margin_grid, (float)grid_global.grid_row-margin_grid));
+
+    cv::Point2f tmp_base_pt = grid_global.base_pt[SRCFRAME];
+
+	cv::Point tmp_mark_pt(50, 50);
+
+    for(int i = 0; i < (int)sensors.size(); i++)
+    {
+        bag_t tmp_pointcloud = sensors[i]->pointcloud;
+        cv::Scalar tmp_scalar;
+        if(i == SRCFRAME)
+            tmp_scalar = cv::Scalar(0,255,0);   //green
+        else
+            tmp_scalar = sensors[i]->pointcolor;
+        //cv::Point2f tmp_base_pt = grid_global.base_pt[i];
+        //if(i == 0 || i == 2)    continue;
+
+        for(int j = 0; j < (int)tmp_pointcloud.size(); j++)
+        {
+            //laser2grid
+            allen::LaserPointCloud tmp_lpc = tmp_pointcloud[j];
+            cv::Point2f tmp_pt_mm = tmp_lpc.laser_coordinate_ * 1000.0f;     //m to mm
+            if(std::isinf(tmp_pt_mm.x) || std::isinf(tmp_pt_mm.y))  continue;
+            cv::Point2f tmp_pt_grid;
+            tmp_pt_grid.x = tmp_base_pt.x - tmp_pt_mm.y * grid_global.mm2pixel;
+            tmp_pt_grid.y = tmp_base_pt.y - tmp_pt_mm.x * grid_global.mm2pixel;
+
+            cv::circle(Canvas, tmp_pt_grid, 2, tmp_scalar, -1);
+        }
+		//mark output parameter
+        tfScalar roll, pitch, yaw, x, y, z;
+        sensors[i]->R.getRPY(roll, pitch, yaw);
+        x = sensors[i]->T.getX();
+        y = sensors[i]->T.getY();
+        z = sensors[i]->T.getZ();
+
+		cv::circle(Canvas, tmp_mark_pt, 10, tmp_scalar, -1);
+		cv::putText(Canvas, 
+				cv::format("laser%d", i+1), 
+				cv::Point(tmp_mark_pt.x + 25, tmp_mark_pt.y+5), cv::FONT_HERSHEY_COMPLEX, 0.7f, tmp_scalar, 1, CV_AA);
+		cv::putText(Canvas, 
+			cv::format("-> t[x: %lf, y: %lf], R[th: %lf], Scale[%f]", x, y, yaw*radian2degree, scale_factor[i]), 
+			cv::Point(tmp_mark_pt.x + 100, tmp_mark_pt.y+5), cv::FONT_HERSHEY_COMPLEX, 0.7f, tmp_scalar, 1, CV_AA);
+		tmp_mark_pt.y += 25;
+    }
+    cv::line(Canvas, cv::Point(0, tmp_base_pt.y), 
+                        cv::Point(grid_global.grid_col, tmp_base_pt.y), cv::Scalar(0,0,255));
+    cv::line(Canvas, cv::Point(tmp_base_pt.x, 0), 
+                        cv::Point(tmp_base_pt.x, grid_global.grid_row), cv::Scalar(0,0,255));
+
+    Globalmap = Canvas.clone();
+
+}
+void tracker::get_syncData(void)
+{
+    flag_dataOn = false;
+    for(int i = 0; i < (int)sensors.size(); i++)
+    {
+        if(sensors[i]->pointcloud.size() == 0)  
+        {
+            ROS_ERROR("Not enough sensor[%s] data in [tracker]", sensors[i]->child_frame.c_str());
+            return;
+        }
+    }
+
+    if(!flag_dataOn)    flag_dataOn = true;
+}
+void tracker::runLoop(void)
+{
+    ros::Rate r(15);
+    while (ros::ok())
+    {
+        get_syncData();
+        if(flag_dataOn)
+        {
+            display_Globalmap();
+            cv::imshow("GlobalMap", Globalmap);
+            cv::waitKey(10);
+        }
+        ros::spinOnce();
+        r.sleep();
+    }
+
 }
 

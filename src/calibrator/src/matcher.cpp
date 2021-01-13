@@ -742,11 +742,11 @@ void matcher::broadcastTF(std::vector<allen::Frame> &_frame)
 		Y = tmp_T.getY();
 		Z = tmp_T.getZ();
 
-		//printf("[before]-> rpy[%lf, %lf, %lf], xyz[%lf, %lf, %lf]\n", roll, pitch, yaw, X, Y, Z);
+		printf("[before]-> rpy[%lf, %lf, %lf], xyz[%lf, %lf, %lf]\n", roll, pitch, yaw, X, Y, Z);
 		X += tmp_output_frame.x;
 		Y += tmp_output_frame.y;
 		yaw += radian_output;	
-		//printf("[after]-> rpy[%lf, %lf, %lf], xyz[%lf, %lf, %lf]\n", roll, pitch, yaw, X, Y, Z);
+		printf("[after]-> rpy[%lf, %lf, %lf], xyz[%lf, %lf, %lf]\n", roll, pitch, yaw, X, Y, Z);
 
 		//feed
 		tf::Quaternion q_r;
