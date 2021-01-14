@@ -685,6 +685,18 @@ void matcher::display_Globalmap(void)
         //cv::Point2f tmp_base_pt = grid_global.base_pt[i];
         //if(i == 0 || i == 2)    continue;
 
+        ////for debug
+        //tfScalar roll, pitch, yaw, x, y, z;
+        //sensors[i]->R.getRPY(roll, pitch, yaw);
+        //x = sensors[i]->T.getX();
+        //y = sensors[i]->T.getY();
+        //z = sensors[i]->T.getZ();
+		//x += output_frames[i].x;
+		//y += output_frames[i].y;
+		//double radian_output = output_frames[i].th * degree2radian;
+		//yaw += radian_output;	
+        ////for debug
+
         for(int j = 0; j < (int)tmp_pointcloud.size(); j++)
         {
             allen::LaserPointCloud tmp_lpc = tmp_pointcloud[j];
@@ -705,6 +717,7 @@ void matcher::display_Globalmap(void)
 				cv::Point(tmp_mark_pt.x + 25, tmp_mark_pt.y+5), cv::FONT_HERSHEY_COMPLEX, 0.7f, tmp_scalar, 1, CV_AA);
 		cv::putText(Canvas_calib, 
 			cv::format("-> t[x: %lf, y: %lf], R[th: %lf], Scale[%f]", output_frames[i].x, output_frames[i].y, output_frames[i].th, scale_factor[i]), 
+			//cv::format("-> t[x: %lf, y: %lf], R[th: %lf], Scale[%f]", x, y, yaw*radian2degree, scale_factor[i]), 
 			cv::Point(tmp_mark_pt.x + 100, tmp_mark_pt.y+5), cv::FONT_HERSHEY_COMPLEX, 0.7f, tmp_scalar, 1, CV_AA);
 		tmp_mark_pt.y += 25;
     }
@@ -742,11 +755,22 @@ void matcher::broadcastTF(std::vector<allen::Frame> &_frame)
 		Y = tmp_T.getY();
 		Z = tmp_T.getZ();
 
+		///////////////////////////////////////////
+		tf::Matrix3x3 icp_result_R(tf::Matrix3x3::setEulerYPR(0, 0, tmp_output_frame.th * degree2radian));
+		tf::Vector3 icp_result_T;		// x, y, z
+		icp_result_T.x = tmp_output_frame.x;
+		icp_result_T.y = tmp_output_frame.y;
+
+		tf::Matrix3x3 final_result_R = icp_result_R*tmp_R;
+		tf::Vector3 final_result_T = icp_result_R*tmp_T + icp_result_T;		// x, y, z
+
+
 		printf("[before]-> rpy[%lf, %lf, %lf], xyz[%lf, %lf, %lf]\n", roll, pitch, yaw, X, Y, Z);
 		X += tmp_output_frame.x;
 		Y += tmp_output_frame.y;
 		yaw += radian_output;	
 		printf("[after]-> rpy[%lf, %lf, %lf], xyz[%lf, %lf, %lf]\n", roll, pitch, yaw, X, Y, Z);
+		///////////////////////////////////////////
 
 		//feed
 		tf::Quaternion q_r;
@@ -754,12 +778,25 @@ void matcher::broadcastTF(std::vector<allen::Frame> &_frame)
 		tf_broadcast.setOrigin(tf::Vector3(X, Y, Z));
 		tf_broadcast.setRotation(q_r);
 
+        //for debug
+        tfScalar _roll, _pitch, _yaw, _x, _y, _z;
+		tf::Quaternion _q_r = tf_broadcast.getRotation();
+		tf::Vector3 _t = tf_broadcast.getOrigin();
+		tf::Matrix3x3 _m(_q_r);
+		_m.getRPY(_roll, _pitch, _yaw);
+		_x = _t.getX();
+		_y = _t.getY();
+		_z = _t.getZ();
+
+		printf("[send]-> rpy[%lf, %lf, %lf], xyz[%lf, %lf, %lf]\n", _roll, _pitch, _yaw, _x, _y, _z);
+        //for debug
+
 		//send
 		std::string child_frame_ = sensors[i]->child_frame + "_calib";
 		br.sendTransform(tf::StampedTransform(tf_broadcast, ros::Time::now(), sensors[i]->parent_frame, child_frame_));
 
 		ROS_INFO("SEND tf [%s][%s] to tracker node", sensors[i]->parent_frame.c_str(), child_frame_.c_str());
-		//std::cout << std::endl;
+		std::cout << std::endl;
 	}
 
 }

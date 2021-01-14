@@ -24,6 +24,14 @@ void tracker::scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx
     std::vector<allen::LaserPointCloud> tmp_pointcloud;
     tmp_pointcloud.reserve(size);
 
+        //for debug
+        tfScalar roll, pitch, yaw, x, y, z;
+        sensors[idx]->R.getRPY(roll, pitch, yaw);
+        x = sensors[idx]->T.getX();
+        y = sensors[idx]->T.getY();
+        z = sensors[idx]->T.getZ();
+        //printf("callback[%d]-> rpy[%lf, %lf, %lf], origin_xyz[%lf, %lf, %lf]\n", idx, roll, pitch, yaw, x, y, z);
+
     for(int i = 0; i < size; i++)
     {
         float val = msg->ranges[i];

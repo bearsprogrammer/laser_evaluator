@@ -27,6 +27,7 @@ class matcher
 {
 private:
     double degree2radian;
+    double radian2degree;
     //flag
     bool flag_dataOn;
     bool flag_matchOn;
@@ -70,6 +71,7 @@ public:
         flag_dataOn(false), flag_matchOn(false), flag_calibOn(false)
     {
         degree2radian = (double)M_PI / 180.0;
+        radian2degree = 180.0 / (double)M_PI;
         rng = cv::RNG(cv::getTickCount());
         //add sensor
         sensors.push_back(new sensor(0, "map", "laser1"));
