@@ -596,6 +596,7 @@ void matcher::calibrate_Frames(std::vector<allen::Frame> &_output_frames)
             {
                 n_x = x * cos(d2r) -  y * sin(d2r) + tmp_tf.x;
                 n_y = x * sin(d2r) + y * cos(d2r) + tmp_tf.y;
+                //n_y = y * cos(d2r) - x * sin(d2r) + tmp_tf.y;
                 tmp_lpc.laser_coordinate_ = cv::Point2f(n_x, n_y);
             }
 
@@ -742,54 +743,36 @@ void matcher::broadcastTF(std::vector<allen::Frame> &_frame)
 
 	for(int i = 0; i < (int)_frame.size(); i++)
 	{
-		allen::Frame tmp_output_frame;	
-		tmp_output_frame = _frame[i];			//output x, y, th
-		double radian_output = tmp_output_frame.th * degree2radian;
+		allen::Frame icp_frame;	
+		icp_frame = _frame[i];			//output x, y, th
+		tf::Quaternion q_icp;
+		q_icp.setRPY(0, 0, icp_frame.th*degree2radian);
+		q_icp.normalize();
 
-		//from URDF
-		tf::Matrix3x3 tmp_R = sensors[i]->R;	// r, p, y
-		tf::Vector3 tmp_T = sensors[i]->T;		// x, y, z
-		tfScalar roll, pitch, yaw, X, Y, Z;
-		tmp_R.getRPY(roll, pitch, yaw);
-		X = tmp_T.getX();
-		Y = tmp_T.getY();
-		Z = tmp_T.getZ();
+		//R
+		tf::Matrix3x3 icp_R(q_icp);
+		tf::Matrix3x3 orig_R = sensors[i]->R;	// r, p, y
+		//T
+		tf::Vector3 icp_T(icp_frame.x, icp_frame.y, 0);
+		tf::Vector3 orig_T = sensors[i]->T;		// x, y, z
+		//output
+		tf::Matrix3x3 send_R;
+		tf::Vector3 send_T;
+		tf::Quaternion send_Rq;
+		send_R = icp_R * orig_R;
+		send_T = icp_R * orig_T + icp_T;
+		send_R.getRotation(send_Rq);
 
-		///////////////////////////////////////////
-		tf::Matrix3x3 icp_result_R(tf::Matrix3x3::setEulerYPR(0, 0, tmp_output_frame.th * degree2radian));
-		tf::Vector3 icp_result_T;		// x, y, z
-		icp_result_T.x = tmp_output_frame.x;
-		icp_result_T.y = tmp_output_frame.y;
-
-		tf::Matrix3x3 final_result_R = icp_result_R*tmp_R;
-		tf::Vector3 final_result_T = icp_result_R*tmp_T + icp_result_T;		// x, y, z
-
-
-		printf("[before]-> rpy[%lf, %lf, %lf], xyz[%lf, %lf, %lf]\n", roll, pitch, yaw, X, Y, Z);
-		X += tmp_output_frame.x;
-		Y += tmp_output_frame.y;
-		yaw += radian_output;	
-		printf("[after]-> rpy[%lf, %lf, %lf], xyz[%lf, %lf, %lf]\n", roll, pitch, yaw, X, Y, Z);
-		///////////////////////////////////////////
-
-		//feed
-		tf::Quaternion q_r;
-		q_r.setRPY(roll, pitch, yaw);
-		tf_broadcast.setOrigin(tf::Vector3(X, Y, Z));
-		tf_broadcast.setRotation(q_r);
+		tf_broadcast.setOrigin(send_T);
+		tf_broadcast.setRotation(send_Rq);
 
         //for debug
-        tfScalar _roll, _pitch, _yaw, _x, _y, _z;
-		tf::Quaternion _q_r = tf_broadcast.getRotation();
-		tf::Vector3 _t = tf_broadcast.getOrigin();
-		tf::Matrix3x3 _m(_q_r);
-		_m.getRPY(_roll, _pitch, _yaw);
-		_x = _t.getX();
-		_y = _t.getY();
-		_z = _t.getZ();
-
-		printf("[send]-> rpy[%lf, %lf, %lf], xyz[%lf, %lf, %lf]\n", _roll, _pitch, _yaw, _x, _y, _z);
-        //for debug
+		//double _r, _p, _y, X, Y, Z;
+		//tf::Quaternion q_;
+		//X = tf_broadcast.getOrigin().x();
+		//Y = tf_broadcast.getOrigin().y();
+		//q_ = tf_broadcast.getRotation();
+		//printf("[send]-> rpy[%lf, %lf, %lf], orig_xyz[%lf, %lf, %lf]\n", _roll, _pitch, _yaw, _x, _y, _z);
 
 		//send
 		std::string child_frame_ = sensors[i]->child_frame + "_calib";
