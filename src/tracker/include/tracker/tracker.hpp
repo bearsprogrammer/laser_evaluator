@@ -57,7 +57,10 @@ public:
         sensors.push_back(new sensor(2, "map", "laser3_calib"));
         sensors.push_back(new sensor(3, "map", "laser4_calib"));
         for(int i = 0; i < SENSORNUM; i++)
+        {
             sensors[i]->pointcolor = cv::Scalar(rng.uniform(50, 255), rng.uniform(50, 255), rng.uniform(50, 255));
+            bag_cloud_.push_back(new bag_t);
+        }
 
         //set scale factor 
         scale_factor.push_back(SCALEFACTOR_1);

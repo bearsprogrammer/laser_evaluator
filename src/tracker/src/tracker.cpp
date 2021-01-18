@@ -153,16 +153,21 @@ void tracker::display_Globalmap(void)
 }
 void tracker::get_syncData(void)
 {
-    flag_dataOn = false;
     for(int i = 0; i < (int)sensors.size(); i++)
     {
         if(sensors[i]->pointcloud.size() == 0)  
         {
             ROS_ERROR("Not enough sensor[%s] data in [tracker]", sensors[i]->child_frame.c_str());
+            flag_dataOn = false;
             return;
         }
+        sensors[i]->mtx_scan.lock();
+        bag_cloud_[i] = &sensors[i]->pointcloud;
+        sensors[i]->mtx_scan.unlock();
+        //printf("bag_cloud[%d]-> size: %d\n", i, (int)bag_cloud_[i]->size());
+        //printf("sensors[%d]-> size: %d\n", i, (int)sensors[i]->pointcloud.size());
     }
-
+    std::cout<<std::endl;
     if(!flag_dataOn)    flag_dataOn = true;
 }
 void tracker::runLoop(void)

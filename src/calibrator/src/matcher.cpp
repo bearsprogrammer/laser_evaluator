@@ -753,7 +753,7 @@ void matcher::broadcastTF(std::vector<allen::Frame> &_frame)
 		tf::Matrix3x3 icp_R(q_icp);
 		tf::Matrix3x3 orig_R = sensors[i]->R;	// r, p, y
 		//T
-		tf::Vector3 icp_T(icp_frame.x, icp_frame.y, 0);
+		tf::Vector3 icp_T(icp_frame.x, icp_frame.y, 0.0);
 		tf::Vector3 orig_T = sensors[i]->T;		// x, y, z
 		//output
 		tf::Matrix3x3 send_R;
