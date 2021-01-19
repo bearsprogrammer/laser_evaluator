@@ -10,6 +10,8 @@
 #include "tracker/templete.hpp"
 #include "tracker/parameter.hpp"
 #include "tracker/sensor.hpp"
+#include "tracker/Flag.hpp"
+#include "tracker/gui.hpp"
 
 #define SENSORNUM 4
 #define SRCFRAME 1 
@@ -25,16 +27,17 @@ class tracker
 private:
     ros::NodeHandle nh_;
     ros::Subscriber scan_1_sub_, scan_2_sub_, scan_3_sub_, scan_4_sub_;
-    bool imshow, flag_dataOn;
     double degree2radian, radian2degree;
     cv::RNG rng;
+    allen::FLAG flag;
 
 public:
     std::vector<sensor*> sensors;
     std::vector<float> scale_factor;
     allen::Grid_param grid;
     cv::Mat Globalmap;
-    std::vector<bag_t*> bag_cloud_;
+    std::vector<bag_t> bag_cloud_;
+    allen::GUI gui;
 
 private:
     void initSubscriber(void);
@@ -43,13 +46,15 @@ private:
 
 public:
     tracker(ros::NodeHandle &_nh) :
-        nh_(_nh),
-        imshow(true), flag_dataOn(false)
+        nh_(_nh)
     {
         degree2radian = (double)M_PI / 180.0;
         radian2degree = 180.0 / (double)M_PI;
         rng = cv::RNG(cv::getTickCount());
         Globalmap = cv::Mat(grid.grid_row, grid.grid_row, CV_8UC3, cv::Scalar(0,0,0));
+
+        cv::Size canvas_size(grid.grid_col+200, grid.grid_row);
+        gui = allen::GUI(canvas_size);
 
         //add objects of frame
         sensors.push_back(new sensor(0, "map", "laser1_calib"));
@@ -59,7 +64,7 @@ public:
         for(int i = 0; i < SENSORNUM; i++)
         {
             sensors[i]->pointcolor = cv::Scalar(rng.uniform(50, 255), rng.uniform(50, 255), rng.uniform(50, 255));
-            bag_cloud_.push_back(new bag_t);
+            bag_cloud_.push_back(bag_t());
         }
 
         //set scale factor 
@@ -73,11 +78,11 @@ public:
     ~tracker()
     {
         std::vector<sensor*>::iterator it_sensor;
-        std::vector<bag_t*>::iterator it_bag;
+        //std::vector<bag_t*>::iterator it_bag;
         for(it_sensor=sensors.begin(); it_sensor!=sensors.end(); it_sensor++)
             delete *it_sensor;
-        for(it_bag=bag_cloud_.begin(); it_bag!=bag_cloud_.end(); it_bag++)
-            delete *it_bag;
+        //for(it_bag=bag_cloud_.begin(); it_bag!=bag_cloud_.end(); it_bag++)
+            //delete *it_bag;
     }
     void display_Globalmap(void);
     void runLoop(void);

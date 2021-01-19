@@ -785,25 +785,16 @@ void matcher::broadcastTF(std::vector<allen::Frame> &_frame)
 }
 void matcher::get_syncData()
 {
-    flag_dataOn = false;
     for(int i = 0; i < (int)sensors.size(); i++)
-        if(sensors[i]->pointcloud.size() == 0)  return;
+	{
+        if(sensors[i]->pointcloud.size() == 0)  
+		{
+			flag_dataOn = false;
+			return;
+		}
+	}
 
-    std::vector<bag_t*> tmp_bag_cloud;
-    for(int i = 0; i < (int)sensors.size(); i++)
-    {
-        sensors[i]->mtx_scan.lock();
-        tmp_bag_cloud.push_back(new bag_t(sensors[i]->pointcloud));
-        //printf("in for loop: size[%d]-> %d\n", i, (int)tmp_bag_cloud[i]->size());
-        sensors[i]->mtx_scan.unlock();
-    }
-    bag_cloud_.swap(tmp_bag_cloud);
     if(!flag_dataOn)    flag_dataOn = true;
-
-    //release
-    std::vector<bag_t*>::iterator it;
-    for(it=tmp_bag_cloud.begin(); it!=tmp_bag_cloud.end(); it++)
-        delete *it;
 }
 void matcher::runLoop()
 {
@@ -821,8 +812,8 @@ void matcher::runLoop()
         display_Globalmap();
 
         //display
-        for(int i = 0; i < (int)sensors.size(); i++)
-            cv::imshow(sensors[i]->child_frame, sensors[i]->Grid_local);
+        //for(int i = 0; i < (int)sensors.size(); i++)
+            //cv::imshow(sensors[i]->child_frame, sensors[i]->Grid_local);
         cv::imshow("Globalmap", Globalmap);
         cv::imshow("Globalmap_calib", Globalmap_calib);
         cv::waitKey(10);

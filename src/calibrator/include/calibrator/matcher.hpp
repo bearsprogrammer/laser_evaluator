@@ -41,7 +41,7 @@ private:
     cv::RNG rng;
 
 public:
-    std::vector<bag_t*> bag_cloud_;
+    //std::vector<bag_t*> bag_cloud_;
     allen::Grid_param grid;
     std::vector<allen::LaserPointCloud> pointcloud_;
     std::vector<sensor*> sensors;
@@ -99,8 +99,9 @@ public:
         std::vector<bag_t*>::iterator it_bag;
         for(it_sensor=sensors.begin(); it_sensor!=sensors.end(); it_sensor++)
             delete *it_sensor;
-        for(it_bag=bag_cloud_.begin(); it_bag!=bag_cloud_.end(); it_bag++)
-            delete *it_bag;
     }
+    void initTarget();
+    void initRobot();
     void runLoop();
 };
+

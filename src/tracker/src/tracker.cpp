@@ -58,7 +58,7 @@ void tracker::scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx
 
         if(std::isinf(tf_tmp_pt.x) || std::isinf(tf_tmp_pt.y))	continue;
 
-        if(imshow)
+        if(flag.get_flag(allen::FLAG::Name::imshow))
         {
             cv::Point2f tf_grid_pt; 
             tf_grid_pt.x = grid.robot_col - tf_tmp_pt.y * grid.mm2pixel;
@@ -72,7 +72,7 @@ void tracker::scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx
     sensors[idx]->pointcloud.swap(tmp_pointcloud);
     sensors[idx]->mtx_scan.unlock();
 
-    if(imshow)
+    if(flag.get_flag(allen::FLAG::Name::imshow))
     {
         Grid += tmp_grid.free;
         Grid -= tmp_grid.occup;
@@ -87,8 +87,8 @@ void tracker::scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx
 }
 void tracker::display_Globalmap(void)
 {
-    if(!imshow)                                           return;
-    if((int)sensors[SRCFRAME]->pointcloud.size() == 0)    return;
+    if(!flag.get_flag(allen::FLAG::Name::imshow))   return;
+    if((int)bag_cloud_[SRCFRAME].size() == 0)       return;
 
     allen::Grid_param grid_global;
     cv::Mat Canvas(grid_global.grid_row, grid_global.grid_col, CV_8UC3, cv::Scalar(0,0,0));
@@ -104,9 +104,10 @@ void tracker::display_Globalmap(void)
 
 	cv::Point tmp_mark_pt(50, 50);
 
-    for(int i = 0; i < (int)sensors.size(); i++)
+    for(int i = 0; i < (int)bag_cloud_.size(); i++)
     {
-        bag_t tmp_pointcloud = sensors[i]->pointcloud;
+        //bag_t tmp_pointcloud = sensors[i]->pointcloud;
+        bag_t tmp_pointcloud = bag_cloud_[i];
         cv::Scalar tmp_scalar;
         if(i == SRCFRAME)
             tmp_scalar = cv::Scalar(0,255,0);   //green
@@ -158,17 +159,17 @@ void tracker::get_syncData(void)
         if(sensors[i]->pointcloud.size() == 0)  
         {
             ROS_ERROR("Not enough sensor[%s] data in [tracker]", sensors[i]->child_frame.c_str());
-            flag_dataOn = false;
+            flag.set_flag_off(allen::FLAG::Name::dataOn);
             return;
         }
         sensors[i]->mtx_scan.lock();
-        bag_cloud_[i] = &sensors[i]->pointcloud;
+        bag_cloud_[i] = sensors[i]->pointcloud;
         sensors[i]->mtx_scan.unlock();
         //printf("bag_cloud[%d]-> size: %d\n", i, (int)bag_cloud_[i]->size());
         //printf("sensors[%d]-> size: %d\n", i, (int)sensors[i]->pointcloud.size());
     }
-    std::cout<<std::endl;
-    if(!flag_dataOn)    flag_dataOn = true;
+    //std::cout<<std::endl;
+    if(!flag.get_flag(allen::FLAG::Name::dataOn))   flag.set_flag_on(allen::FLAG::Name::dataOn);
 }
 void tracker::runLoop(void)
 {
@@ -176,11 +177,15 @@ void tracker::runLoop(void)
     while (ros::ok())
     {
         get_syncData();
-        if(flag_dataOn)
+        if(flag.get_flag(allen::FLAG::Name::dataOn))
         {
             display_Globalmap();
-            cv::imshow("GlobalMap", Globalmap);
-            cv::waitKey(10);
+            if(flag.get_flag(allen::FLAG::Name::imshow))
+            {
+                cv::imshow("GlobalMap", Globalmap);
+                cv::imshow(gui.canvas_win, gui.canvas);
+                cv::waitKey(10);
+            }
         }
         ros::spinOnce();
         r.sleep();
