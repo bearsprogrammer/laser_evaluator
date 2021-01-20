@@ -152,6 +152,32 @@ void tracker::display_Globalmap(void)
     Globalmap = Canvas.clone();
 
 }
+void tracker::GetMouseEvent(cv::Mat &_canvas)
+{
+    if(_canvas.empty())     return;
+    if(!gui.initialize)     return;
+
+    bool mouse_down = gui.mi.getDown();
+    if(mouse_down)
+    {
+        cv::Point m_pt(gui.mi.getX(), gui.mi.getY());
+        printf("m_pt[x: %d, y: %d]\n", m_pt.x, m_pt.y);
+
+        bool valid_init_b = false;
+        bool valid_calib_b = false;
+        if(gui.b_init.rect.contains(m_pt))      valid_init_b = true;
+        if(gui.b_calib.rect.contains(m_pt))     valid_calib_b = true;
+        if(valid_init_b)
+        {
+            gui.clicked_button(_canvas, gui.b_init);
+        }
+        if(valid_calib_b)
+        {
+            gui.clicked_button(_canvas, gui.b_calib);
+        }
+    }
+
+}
 void tracker::get_syncData(void)
 {
     for(int i = 0; i < (int)sensors.size(); i++)
@@ -177,16 +203,18 @@ void tracker::runLoop(void)
     while (ros::ok())
     {
         get_syncData();
+        //GetMouseEvent(gui.canvas);
         if(flag.get_flag(allen::FLAG::Name::dataOn))
         {
             display_Globalmap();
             if(flag.get_flag(allen::FLAG::Name::imshow))
             {
-                cv::imshow("GlobalMap", Globalmap);
-                cv::imshow(gui.canvas_win, gui.canvas);
+                cv::imshow("GlobalMap", Globalmap);         //calibrated pointcloud
+                cv::imshow(gui.canvas_win, gui.canvas);     //gui
                 cv::waitKey(10);
             }
         }
+        GetMouseEvent(gui.canvas);
         ros::spinOnce();
         r.sleep();
     }

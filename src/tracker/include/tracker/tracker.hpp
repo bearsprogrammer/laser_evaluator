@@ -56,7 +56,7 @@ public:
         cv::Size canvas_size(grid.grid_col+200, grid.grid_row);
         gui = allen::GUI(canvas_size);
 
-        //add objects of frame
+        //add objects of frame 
         sensors.push_back(new sensor(0, "map", "laser1_calib"));
         sensors.push_back(new sensor(1, "map", "laser2_calib"));
         sensors.push_back(new sensor(2, "map", "laser3_calib"));
@@ -85,6 +85,7 @@ public:
             //delete *it_bag;
     }
     void display_Globalmap(void);
+    void GetMouseEvent(cv::Mat &_canvas);
     void runLoop(void);
 
 };
