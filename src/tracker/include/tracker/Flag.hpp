@@ -8,7 +8,9 @@ namespace allen
         enum Name
         {
             imshow,
-            dataOn
+            dataOn,
+            initTarget,
+            calibration
         };
         std::vector<std::pair<Name, bool> > data;
         std::vector<std::pair<Name, bool> > init_data;
@@ -18,6 +20,8 @@ namespace allen
         {
             push_flag(FLAG::Name::imshow, true);
             push_flag(FLAG::Name::dataOn, false);
+            push_flag(FLAG::Name::initTarget, false);
+            push_flag(FLAG::Name::calibration, false);
         }
         ~FLAG()
         {}

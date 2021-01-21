@@ -100,8 +100,6 @@ public:
         for(it_sensor=sensors.begin(); it_sensor!=sensors.end(); it_sensor++)
             delete *it_sensor;
     }
-    void initTarget();
-    void initRobot();
     void runLoop();
 };
 

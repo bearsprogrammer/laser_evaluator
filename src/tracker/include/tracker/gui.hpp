@@ -16,10 +16,10 @@ namespace allen
         int b_width, b_height;
 
     public:
-        button(std::string _name, cv::Scalar _scalar)    :
+        button(std::string _name, cv::Scalar _init_scalar)    :
             name(_name),
             clicked(false),
-            init_scalar(_scalar), 
+            init_scalar(_init_scalar), 
             font_scale(1.5f),
             b_width(170), b_height(50)
         {
@@ -50,8 +50,8 @@ namespace allen
             cv::putText(this->canvas_basic, str, pt, fontface, scale, scalar, 2);
             cv::putText(this->canvas_clicked, str, pt, fontface, scale, scalar, 2);
 
-            this->ROI = canvas_basic(this->rect);
-            this->ROI_clicked = canvas_clicked(this->rect);
+            this->ROI = canvas_basic(this->rect).clone();
+            this->ROI_clicked = canvas_clicked(this->rect).clone();
 
             //cv::imshow(this->name, this->canvas_basic);    //
             //cv::imshow(this->name + "clicked", this->canvas_clicked);    //
@@ -77,11 +77,47 @@ namespace allen
             this->rect = tmp_rect;
         }
     };
+    class Display
+    {
+    public:
+        std::string name;
+        cv::Rect rect;
+        cv::Scalar init_scalar;
+        cv::Mat ROI;
+        cv::Size d_size;
+
+    private:
+        void crop_initRect()
+        {
+            cv::Mat tmp_canvas(d_size.height, d_size.width, CV_8UC3, cv::Scalar(0,0,0));
+            cv::Point tmp_pt;
+            tmp_pt.x = 0;
+            tmp_pt.y = 0;
+            cv::Rect tmp_rect(tmp_pt.x, tmp_pt.y, d_size.width, d_size.height);
+            cv::rectangle(tmp_canvas, tmp_rect, init_scalar, 6);
+
+            ROI = tmp_canvas(tmp_rect).clone();
+            //cv::imshow("crop_display", ROI);
+        }
+
+    public:
+        Display(std::string _name, cv::Scalar _init_scalar, cv::Size _canvas_size)     :
+            name(_name),
+            init_scalar(_init_scalar),
+            d_size(_canvas_size)
+        {
+            crop_initRect();
+        }
+        Display(){}
+        ~Display(){}
+
+    };
     class GUI
     {
     private:
         cv::Size canvas_s;
-        cv::Point base_pt;
+        cv::Point base_pt, base_d_pt;
+        int margin_canvas;
 
     public:
         cv::Mat canvas;
@@ -89,6 +125,7 @@ namespace allen
         //MouseInterface mi = MouseInterface(1);
         MouseInterface mi;
         button b_init, b_calib;
+        Display d_map;
         bool initialize;
 
     private:
@@ -108,6 +145,17 @@ namespace allen
             _button.button_pt = _base_pt;
             _button.rect = cv::Rect(_base_pt.x, _base_pt.y, _button.rect.width, _button.rect.height);
         }
+        void add_display(cv::Mat &_canvas, Display &_display, cv::Point _base_pt)
+        {
+            cv::Point front, tail;
+            front.x = _base_pt.x;
+            front.y = _base_pt.y;
+            tail.x = _base_pt.x + _display.d_size.width;
+            tail.y = _base_pt.y + _display.d_size.height;
+
+            _display.ROI.copyTo(_canvas.rowRange(front.y, tail.y).colRange(front.x, tail.x));
+            _display.rect = cv::Rect(_base_pt.x, _base_pt.y, _display.d_size.width, _display.d_size.height);
+        }
         void init_Canvas(cv::Size &_size)
         {
             if(_size.height <= 0)
@@ -116,7 +164,7 @@ namespace allen
                 this->initialize = false;
                 return;
             }
-            canvas = cv::Mat(_size, CV_8UC3, cv::Scalar(0,0,0));
+            canvas = cv::Mat(_size, CV_8UC3, cv::Scalar(125,125,125));
 
             int margin = 20;
             this->base_pt.x = canvas.cols - margin - b_init.rect.width;
@@ -138,6 +186,11 @@ namespace allen
             }
             add_button(canvas, b_calib, this->base_pt);
 
+            //display
+            this->base_d_pt.x = this->margin_canvas;
+            this->base_d_pt.y = this->margin_canvas;
+            add_display(canvas, d_map, this->base_d_pt);
+
             cv::namedWindow(canvas_win);
             mi.setWindow(canvas_win.c_str());
 
@@ -146,14 +199,18 @@ namespace allen
         }
 
     public:
-        GUI(cv::Size &_size)    :
-            canvas_s(_size),
+        GUI(cv::Size _grid_size, int _margin)    :
             canvas_win("tracker"),
-            initialize(false)
+            initialize(false),
+            margin_canvas(_margin)
         {
+            canvas_s.width = _grid_size.width + _margin*2;
+            canvas_s.height = _grid_size.height + _margin*2;
+
             mi = MouseInterface(1);
             b_init = button("Initialize", cv::Scalar(255,255,255));
             b_calib = button("Calibration", cv::Scalar(255,255,255));
+            d_map = Display("Globalmap", cv::Scalar(125,125,125), _grid_size);
             init_Canvas(canvas_s);
         }
         GUI(){};
@@ -183,6 +240,35 @@ namespace allen
 
             tmp_ROI.copyTo(_canvas.rowRange(front.y, tail.y).colRange(front.x, tail.x));
             ROS_INFO("[gui]->[%s]button is clicked![%d]", _button.name.c_str(), _button.clicked);
+        }
+        void display_grid(cv::Mat &_canvas, cv::Mat &_stream_map, cv::Rect &_drag_rect, Grid_param &_grid_p)
+        {
+            if(_canvas.empty() || _stream_map.empty())  return;
+
+            cv::Mat src = _stream_map.clone();
+            cv::Mat dst = _canvas.clone();
+
+            cv::Point front, tail;
+            front.x = d_map.rect.x;
+            front.y = d_map.rect.y;
+            tail.x = d_map.rect.x + d_map.rect.width;
+            tail.y = d_map.rect.y + d_map.rect.height;
+            //map
+            src.copyTo(dst.rowRange(front.y, tail.y).colRange(front.x, tail.x));
+
+            //drag rect
+            if(_drag_rect.x != 0 && _drag_rect.y != 0)
+            {
+                //hori
+                cv::line(dst, cv::Point(front.x, _drag_rect.br().y), 
+                                    cv::Point(tail.x, _drag_rect.br().y), cv::Scalar(0,0,255));
+                //verti
+                cv::line(dst, cv::Point(_drag_rect.br().x, front.y), 
+                                    cv::Point(_drag_rect.br().x, tail.y), cv::Scalar(0,0,255));
+                cv::rectangle(dst, _drag_rect, cv::Scalar(255,0,0), 2);
+            }
+
+            this->canvas = dst.clone(); 
         }
     };
 

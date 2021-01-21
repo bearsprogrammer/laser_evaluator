@@ -14,6 +14,7 @@ public:
         bool drag = false;
         int pre_event = 0;
     };
+    cv::Point drag_s_pt;
 
 private:
     int number_of_mouse;

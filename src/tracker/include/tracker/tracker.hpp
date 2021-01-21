@@ -30,6 +30,7 @@ private:
     double degree2radian, radian2degree;
     cv::RNG rng;
     allen::FLAG flag;
+    cv::Rect drag_rect;
 
 public:
     std::vector<sensor*> sensors;
@@ -53,8 +54,8 @@ public:
         rng = cv::RNG(cv::getTickCount());
         Globalmap = cv::Mat(grid.grid_row, grid.grid_row, CV_8UC3, cv::Scalar(0,0,0));
 
-        cv::Size canvas_size(grid.grid_col+200, grid.grid_row);
-        gui = allen::GUI(canvas_size);
+        cv::Size canvas_size(grid.grid_col, grid.grid_row);
+        gui = allen::GUI(canvas_size, 100);
 
         //add objects of frame 
         sensors.push_back(new sensor(0, "map", "laser1_calib"));
@@ -86,6 +87,7 @@ public:
     }
     void display_Globalmap(void);
     void GetMouseEvent(cv::Mat &_canvas);
+    void set_Target(int _target_num);
     void runLoop(void);
 
 };

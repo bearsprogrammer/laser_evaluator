@@ -144,24 +144,42 @@ void tracker::display_Globalmap(void)
 			cv::Point(tmp_mark_pt.x + 100, tmp_mark_pt.y+5), cv::FONT_HERSHEY_COMPLEX, 0.7f, tmp_scalar, 1, CV_AA);
 		tmp_mark_pt.y += 25;
     }
-    cv::line(Canvas, cv::Point(0, tmp_base_pt.y), 
-                        cv::Point(grid_global.grid_col, tmp_base_pt.y), cv::Scalar(0,0,255));
-    cv::line(Canvas, cv::Point(tmp_base_pt.x, 0), 
-                        cv::Point(tmp_base_pt.x, grid_global.grid_row), cv::Scalar(0,0,255));
+    //SRC_FRAME
+    //cv::line(Canvas, cv::Point(0, tmp_base_pt.y), 
+                        //cv::Point(grid_global.grid_col, tmp_base_pt.y), cv::Scalar(0,0,255));
+    //cv::line(Canvas, cv::Point(tmp_base_pt.x, 0), 
+                        //cv::Point(tmp_base_pt.x, grid_global.grid_row), cv::Scalar(0,0,255));
+    //Center
+    //cv::line(Canvas, cv::Point(0, grid_global.robot_row), 
+                        //cv::Point(grid_global.grid_col, grid_global.robot_row), cv::Scalar(0,0,255));
+    //cv::line(Canvas, cv::Point(grid_global.robot_col, 0), 
+                        //cv::Point(grid_global.robot_col, grid_global.grid_row), cv::Scalar(0,0,255));
 
     Globalmap = Canvas.clone();
+    if(gui.initialize)  
+    {
+        gui.display_grid(gui.canvas, Globalmap, drag_rect, grid_global);
+    }
+}
+void tracker::set_Target(int _target_num)
+{
 
 }
 void tracker::GetMouseEvent(cv::Mat &_canvas)
 {
     if(_canvas.empty())     return;
     if(!gui.initialize)     return;
-
-    bool mouse_down = gui.mi.getDown();
-    if(mouse_down)
+    
+    bool m_down = gui.mi.getDown();
+    bool m_drag = gui.mi.getDrag();
+    if(m_down)
     {
         cv::Point m_pt(gui.mi.getX(), gui.mi.getY());
+        if(m_pt.x < 0 || m_pt.y < 0 || m_pt.x > gui.canvas.cols || m_pt.y > gui.canvas.rows)    return;
         printf("m_pt[x: %d, y: %d]\n", m_pt.x, m_pt.y);
+
+        if(gui.d_map.rect.contains(m_pt))
+            gui.mi.drag_s_pt = cv::Point(gui.mi.getX(), gui.mi.getY());
 
         bool valid_init_b = false;
         bool valid_calib_b = false;
@@ -170,10 +188,30 @@ void tracker::GetMouseEvent(cv::Mat &_canvas)
         if(valid_init_b)
         {
             gui.clicked_button(_canvas, gui.b_init);
-        }
+            flag.set_flag_on(allen::FLAG::Name::initTarget);    //TODO
+            //TODO 
+            //make auto flag_off for initTarget
+        } 
         if(valid_calib_b)
         {
             gui.clicked_button(_canvas, gui.b_calib);
+            flag.set_flag_on(allen::FLAG::Name::calibration);
+
+        }
+    }
+    if(flag.get_flag(allen::FLAG::Name::initTarget))
+    {
+        if(m_drag && gui.mi.drag_s_pt.x != 0 && gui.mi.drag_s_pt.y != 0)
+        {
+            cv::Point m_drag_pt(gui.mi.getX(), gui.mi.getY());
+            if(gui.d_map.rect.contains(m_drag_pt))
+            {
+                printf("drag_[x: %d, y: %d][x: %d, y: %d]\n", 
+                        gui.mi.drag_s_pt.x, gui.mi.drag_s_pt.y, m_drag_pt.x, m_drag_pt.y);
+                drag_rect = cv::Rect(gui.mi.drag_s_pt, m_drag_pt);
+                printf("rect[tl: %d, %d][br: %d, %d]\n\n", drag_rect.tl().x, drag_rect.tl().y,
+                                                            drag_rect.br().x, drag_rect.br().y);
+            }
         }
     }
 
@@ -203,18 +241,18 @@ void tracker::runLoop(void)
     while (ros::ok())
     {
         get_syncData();
-        //GetMouseEvent(gui.canvas);
+        GetMouseEvent(gui.canvas);
         if(flag.get_flag(allen::FLAG::Name::dataOn))
         {
-            display_Globalmap();
             if(flag.get_flag(allen::FLAG::Name::imshow))
             {
+                display_Globalmap();
                 cv::imshow("GlobalMap", Globalmap);         //calibrated pointcloud
                 cv::imshow(gui.canvas_win, gui.canvas);     //gui
                 cv::waitKey(10);
             }
         }
-        GetMouseEvent(gui.canvas);
+        //GetMouseEvent(gui.canvas);
         ros::spinOnce();
         r.sleep();
     }
