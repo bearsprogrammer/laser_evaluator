@@ -19,6 +19,21 @@ namespace allen
 
         }
     };
+    class Target
+    {
+    public:
+        int target_idx;
+        cv::Rect target_rect;
+    public:
+        Target()    :
+            target_idx(0)
+        {
+
+        }
+        ~Target()
+        {}
+    };
+
 
 }
 

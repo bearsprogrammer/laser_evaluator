@@ -19,6 +19,7 @@
 #define SCALEFACTOR_2 1.0f
 #define SCALEFACTOR_3 0.975f
 #define SCALEFACTOR_4 0.899f
+#define TARGETNUM 2
 
 using bag_t = std::vector<allen::LaserPointCloud>;
 
@@ -39,6 +40,7 @@ public:
     cv::Mat Globalmap;
     std::vector<bag_t> bag_cloud_;
     allen::GUI gui;
+    std::vector<allen::Target> target_;
 
 private:
     void initSubscriber(void);
@@ -87,7 +89,8 @@ public:
     }
     void display_Globalmap(void);
     void GetMouseEvent(cv::Mat &_canvas);
-    void set_Target(int _target_num);
+    void set_Target(std::vector<allen::Target> &_target, cv::Rect _target_rect);
+    void tracking_Targets(std::vector<allen::Target> &_target, std::vector<bag_t> &_bag_cloud);
     void runLoop(void);
 
 };

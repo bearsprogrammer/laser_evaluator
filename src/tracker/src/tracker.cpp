@@ -158,11 +158,45 @@ void tracker::display_Globalmap(void)
     Globalmap = Canvas.clone();
     if(gui.initialize)  
     {
-        gui.display_grid(gui.canvas, Globalmap, drag_rect, grid_global);
+        if((int)target_.size() == TARGETNUM && flag.get_flag(allen::FLAG::Name::initTarget))
+        {
+            flag.set_flag_on(allen::FLAG::Name::targetOn);
+            flag.set_flag_off(allen::FLAG::Name::initTarget);
+            gui.clicked_button(gui.canvas, gui.b_init);
+        }
+        gui.display_grid(gui.canvas, Globalmap, drag_rect, grid_global, flag.get_flag(allen::FLAG::Name::initTarget));
     }
 }
-void tracker::set_Target(int _target_num)
+void tracker::set_Target(std::vector<allen::Target> &_target, cv::Rect _target_rect)
 {
+    if((int)_target.size() >= TARGETNUM)    return;
+
+    allen::Target tmp_target;
+    if((int)_target.size() != 0)
+    {
+        int _idx = _target.back().target_idx;
+        tmp_target.target_idx = ++_idx;
+    }
+    tmp_target.target_rect = _target_rect;
+
+    _target.push_back(tmp_target);
+    printf("[target_]-> size: %d, idx: %d, rect: [w:%d, h:%d]\n", (int)_target.size(),
+            _target.back().target_idx, _target.back().target_rect.width, _target.back().target_rect.height);
+    flag.set_flag_off(allen::FLAG::Name::setRect);
+}
+void tracker::tracking_Targets(std::vector<allen::Target> &_target, std::vector<bag_t> &_bag_cloud)
+{
+    if((int)_target.size() != TARGETNUM)    return;
+
+    for(int i = 0; i < (int)_target.size(); i++)
+    {
+        allen::Target tmp_target = _target[i];
+        //grid2robot
+         
+
+    }
+
+
 
 }
 void tracker::GetMouseEvent(cv::Mat &_canvas)
@@ -172,11 +206,12 @@ void tracker::GetMouseEvent(cv::Mat &_canvas)
     
     bool m_down = gui.mi.getDown();
     bool m_drag = gui.mi.getDrag();
+    bool m_up = gui.mi.getUp();
     if(m_down)
     {
         cv::Point m_pt(gui.mi.getX(), gui.mi.getY());
         if(m_pt.x < 0 || m_pt.y < 0 || m_pt.x > gui.canvas.cols || m_pt.y > gui.canvas.rows)    return;
-        printf("m_pt[x: %d, y: %d]\n", m_pt.x, m_pt.y);
+        //printf("m_pt[x: %d, y: %d]\n", m_pt.x, m_pt.y);
 
         if(gui.d_map.rect.contains(m_pt))
             gui.mi.drag_s_pt = cv::Point(gui.mi.getX(), gui.mi.getY());
@@ -196,7 +231,6 @@ void tracker::GetMouseEvent(cv::Mat &_canvas)
         {
             gui.clicked_button(_canvas, gui.b_calib);
             flag.set_flag_on(allen::FLAG::Name::calibration);
-
         }
     }
     if(flag.get_flag(allen::FLAG::Name::initTarget))
@@ -206,14 +240,19 @@ void tracker::GetMouseEvent(cv::Mat &_canvas)
             cv::Point m_drag_pt(gui.mi.getX(), gui.mi.getY());
             if(gui.d_map.rect.contains(m_drag_pt))
             {
-                printf("drag_[x: %d, y: %d][x: %d, y: %d]\n", 
-                        gui.mi.drag_s_pt.x, gui.mi.drag_s_pt.y, m_drag_pt.x, m_drag_pt.y);
+                //printf("drag_[x: %d, y: %d][x: %d, y: %d]\n", 
+                        //gui.mi.drag_s_pt.x, gui.mi.drag_s_pt.y, m_drag_pt.x, m_drag_pt.y);
                 drag_rect = cv::Rect(gui.mi.drag_s_pt, m_drag_pt);
-                printf("rect[tl: %d, %d][br: %d, %d]\n\n", drag_rect.tl().x, drag_rect.tl().y,
-                                                            drag_rect.br().x, drag_rect.br().y);
+                //printf("rect[tl: %d, %d][br: %d, %d]\n\n", drag_rect.tl().x, drag_rect.tl().y,
+                                                            //drag_rect.br().x, drag_rect.br().y);
+                //ROS_INFO("rect[tl: %d, %d][br: %d, %d]", drag_rect.tl().x, drag_rect.tl().y,
+                                                            //drag_rect.br().x, drag_rect.br().y);
+                flag.set_flag_on(allen::FLAG::Name::setRect);
             }
         }
     }
+    if(flag.get_flag(allen::FLAG::Name::setRect) && m_up)
+        set_Target(target_, drag_rect);
 
 }
 void tracker::get_syncData(void)
@@ -250,6 +289,10 @@ void tracker::runLoop(void)
                 cv::imshow("GlobalMap", Globalmap);         //calibrated pointcloud
                 cv::imshow(gui.canvas_win, gui.canvas);     //gui
                 cv::waitKey(10);
+            }
+            if(flag.get_flag(allen::FLAG::Name::targetOn))
+            {
+                tracking_Targets(target_, bag_cloud_);
             }
         }
         //GetMouseEvent(gui.canvas);

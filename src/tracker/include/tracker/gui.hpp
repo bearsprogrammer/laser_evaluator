@@ -241,7 +241,7 @@ namespace allen
             tmp_ROI.copyTo(_canvas.rowRange(front.y, tail.y).colRange(front.x, tail.x));
             ROS_INFO("[gui]->[%s]button is clicked![%d]", _button.name.c_str(), _button.clicked);
         }
-        void display_grid(cv::Mat &_canvas, cv::Mat &_stream_map, cv::Rect &_drag_rect, Grid_param &_grid_p)
+        void display_grid(cv::Mat &_canvas, cv::Mat &_stream_map, cv::Rect &_drag_rect, Grid_param &_grid_p, bool mode)
         {
             if(_canvas.empty() || _stream_map.empty())  return;
 
@@ -257,7 +257,7 @@ namespace allen
             src.copyTo(dst.rowRange(front.y, tail.y).colRange(front.x, tail.x));
 
             //drag rect
-            if(_drag_rect.x != 0 && _drag_rect.y != 0)
+            if(_drag_rect.x != 0 && _drag_rect.y != 0 && mode)
             {
                 //hori
                 cv::line(dst, cv::Point(front.x, _drag_rect.br().y), 
