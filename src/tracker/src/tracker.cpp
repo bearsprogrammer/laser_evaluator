@@ -48,11 +48,11 @@ void tracker::scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx
         tf::Vector3 reprj_p = sensors[idx]->R * p + sensors[idx]->T;
 
         cv::Point2f tf_tmp_pt;
-        tf_tmp_pt.x = 1000.0f * reprj_p.getX();
+        tf_tmp_pt.x = 1000.0f * reprj_p.getX();     //m to mm
         tf_tmp_pt.y = 1000.0f * reprj_p.getY();
         temp_lpc.laser_stamp_ = msg->header.stamp;
         temp_lpc.angle = angle;
-        temp_lpc.laser_coordinate_ = cv::Point2f(reprj_p.getX(), reprj_p.getY());
+        temp_lpc.laser_coordinate_ = tf_tmp_pt;
 
         tmp_pointcloud.push_back(temp_lpc);
 
@@ -63,6 +63,8 @@ void tracker::scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx
             cv::Point2f tf_grid_pt; 
             tf_grid_pt.x = grid.robot_col - tf_tmp_pt.y * grid.mm2pixel;
             tf_grid_pt.y = grid.robot_row - tf_tmp_pt.x * grid.mm2pixel;
+            //printf("before_laser-> %lf, %lf\n", tf_tmp_pt.x, tf_tmp_pt.y);
+            //cv::Point2f tmp_laser_pt = grid2laser(tf_grid_pt, 0, grid);
 
             cv::circle(tmp_grid.occup, tf_grid_pt, 5, cv::Scalar(255, 255, 255), -1);
             cv::line(tmp_grid.free, cv::Point2f(tmp_grid.robot_col, tmp_grid.robot_row), tf_grid_pt, cv::Scalar(255,255,255), 2);
@@ -120,7 +122,8 @@ void tracker::display_Globalmap(void)
         {
             //laser2grid
             allen::LaserPointCloud tmp_lpc = tmp_pointcloud[j];
-            cv::Point2f tmp_pt_mm = tmp_lpc.laser_coordinate_ * 1000.0f;     //m to mm
+            //cv::Point2f tmp_pt_mm = tmp_lpc.laser_coordinate_ * 1000.0f;     //m to mm
+            cv::Point2f tmp_pt_mm = tmp_lpc.laser_coordinate_;
             if(std::isinf(tmp_pt_mm.x) || std::isinf(tmp_pt_mm.y))  continue;
             cv::Point2f tmp_pt_grid;
             tmp_pt_grid.x = tmp_base_pt.x - tmp_pt_mm.y * grid_global.mm2pixel;
@@ -178,26 +181,100 @@ void tracker::set_Target(std::vector<allen::Target> &_target, cv::Rect _target_r
         tmp_target.target_idx = ++_idx;
     }
     tmp_target.target_rect = _target_rect;
+    tmp_target.set_Centerpt();
+    tmp_target.target_radius = TRACKING_RADIUS;
 
     _target.push_back(tmp_target);
     printf("[target_]-> size: %d, idx: %d, rect: [w:%d, h:%d]\n", (int)_target.size(),
             _target.back().target_idx, _target.back().target_rect.width, _target.back().target_rect.height);
     flag.set_flag_off(allen::FLAG::Name::setRect);
 }
-void tracker::tracking_Targets(std::vector<allen::Target> &_target, std::vector<bag_t> &_bag_cloud)
+void tracker::tracking_Targets(std::vector<allen::Target> &_target)
 {
     if((int)_target.size() != TARGETNUM)    return;
 
     for(int i = 0; i < (int)_target.size(); i++)
     {
         allen::Target tmp_target = _target[i];
-        //grid2robot
-         
+        //grid2laser
+        cv::Point grid_pt = tmp_target.center_pt;
+        printf("[target_%d]->[gx: %d][gy: %d]\n", i, tmp_target.center_pt.x, tmp_target.center_pt.y);
+        cv::Point2f laser_pt = grid2laser(grid_pt, GUI_MARGIN, grid);   //target
 
+        //measure dist
+        regist_Pointcloud(laser_pt, bag_cloud_);
+
+        cv::rectangle(gui.canvas, tmp_target.target_rect, cv::Scalar(255,0,0), 2);
+        cv::circle(gui.canvas, grid_pt, 3, cv::Scalar(0,255,255));
+    }
+    //cv::imshow("debug", gui.canvas);
+    //cv::waitKey(0);
+
+
+}
+void tracker::regist_Pointcloud(cv::Point2f _target_src, std::vector<bag_t> &_bag_cloud)
+{
+    for(int i = 0; i < (int)_bag_cloud.size(); i++)         //each of frame
+    {
+        bag_t tmp_pointcloud = _bag_cloud[i];
+        std::vector<cv::Point2f> tmp_inlier;
+        tmp_inlier.reserve((int)tmp_pointcloud.size());
+
+        cv::Point target_grid, laser_grid;
+        target_grid = laser2grid(_target_src, GUI_MARGIN, grid);
+
+        for(int j = 0; j < (int)tmp_pointcloud.size(); j++)
+        {
+            cv::Point2f laser_dst = tmp_pointcloud[j].laser_coordinate_;
+
+            float dist = get_dist2f(_target_src, laser_dst);
+                //printf("[laser_coordinate (%d/%d)]-> [src: %f, %f][dst: %f, %f]-> dist: %f\n", 
+                        //j, (int)tmp_pointcloud.size(), _target_src.x, _target_src.y, laser_dst.x, laser_dst.y, dist);
+            laser_grid = laser2grid(laser_dst, GUI_MARGIN, grid);
+            printf("grid_pt-> [src: %d, %d][dst: %d, %d]\n", target_grid.x, target_grid.y, laser_grid.x, laser_grid.y);
+
+            if(dist < TRACKING_RADIUS) 
+            {
+                //for debug
+                printf("[laser_coordinate (%d/%d)]-> [src: %f, %f][dst: %f, %f]-> dist: %f\n", 
+                        j, (int)tmp_pointcloud.size(), _target_src.x, _target_src.y, laser_dst.x, laser_dst.y, dist);
+
+                cv::line(gui.canvas, target_grid, laser_grid, cv::Scalar(0,0,255));
+                
+                cv::imshow("debug", gui.canvas);
+                cv::waitKey(0);
+
+                tmp_inlier.push_back(laser_dst);
+            }
+        }
+
+        printf("[laser_%d size]-> %d\n", i, (int)tmp_inlier.size());
     }
 
+}
+cv::Point tracker::laser2grid(cv::Point2f _laser_pt, int _gui_margin, allen::Grid_param _grid_param)
+{
+    cv::Point output_grid;
+    output_grid.x = _grid_param.robot_col - _laser_pt.y * _grid_param.mm2pixel;
+    output_grid.y = _grid_param.robot_row - _laser_pt.x * _grid_param.mm2pixel;
 
+    output_grid.x += _gui_margin;
+    output_grid.y += _gui_margin;
 
+    return output_grid;
+}
+cv::Point2f tracker::grid2laser(cv::Point _canvas_grid_pt, int _gui_margin, allen::Grid_param _grid_param)
+{
+    cv::Point2f output_laser;
+    cv::Point tmp_grid_ori;
+    tmp_grid_ori.x = _canvas_grid_pt.x - _gui_margin;
+    tmp_grid_ori.y = _canvas_grid_pt.y - _gui_margin;
+    //printf("ori_grid: [%d, %d]\n", tmp_grid_ori.x, tmp_grid_ori.y);
+    output_laser.x = (_grid_param.robot_row - tmp_grid_ori.y) / _grid_param.mm2pixel;
+    output_laser.y = (_grid_param.robot_col - tmp_grid_ori.x) / _grid_param.mm2pixel;
+    //printf("laser: [%f, %f]\n\n", output_laser.x, output_laser.y);
+
+    return output_laser;
 }
 void tracker::GetMouseEvent(cv::Mat &_canvas)
 {
@@ -223,9 +300,7 @@ void tracker::GetMouseEvent(cv::Mat &_canvas)
         if(valid_init_b)
         {
             gui.clicked_button(_canvas, gui.b_init);
-            flag.set_flag_on(allen::FLAG::Name::initTarget);    //TODO
-            //TODO 
-            //make auto flag_off for initTarget
+            flag.set_flag_on(allen::FLAG::Name::initTarget);    
         } 
         if(valid_calib_b)
         {
@@ -292,7 +367,7 @@ void tracker::runLoop(void)
             }
             if(flag.get_flag(allen::FLAG::Name::targetOn))
             {
-                tracking_Targets(target_, bag_cloud_);
+                tracking_Targets(target_);
             }
         }
         //GetMouseEvent(gui.canvas);

@@ -20,6 +20,8 @@
 #define SCALEFACTOR_3 0.975f
 #define SCALEFACTOR_4 0.899f
 #define TARGETNUM 2
+#define TRACKING_RADIUS 500.0f
+#define GUI_MARGIN 100
 
 using bag_t = std::vector<allen::LaserPointCloud>;
 
@@ -29,8 +31,7 @@ private:
     ros::NodeHandle nh_;
     ros::Subscriber scan_1_sub_, scan_2_sub_, scan_3_sub_, scan_4_sub_;
     double degree2radian, radian2degree;
-    cv::RNG rng;
-    allen::FLAG flag;
+    cv::RNG rng; allen::FLAG flag;
     cv::Rect drag_rect;
 
 public:
@@ -45,8 +46,7 @@ public:
 private:
     void initSubscriber(void);
     void scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx);
-    void get_syncData(void);
-
+    void get_syncData(void); 
 public:
     tracker(ros::NodeHandle &_nh) :
         nh_(_nh)
@@ -57,7 +57,7 @@ public:
         Globalmap = cv::Mat(grid.grid_row, grid.grid_row, CV_8UC3, cv::Scalar(0,0,0));
 
         cv::Size canvas_size(grid.grid_col, grid.grid_row);
-        gui = allen::GUI(canvas_size, 100);
+        gui = allen::GUI(canvas_size, GUI_MARGIN);
 
         //add objects of frame 
         sensors.push_back(new sensor(0, "map", "laser1_calib"));
@@ -88,9 +88,16 @@ public:
             //delete *it_bag;
     }
     void display_Globalmap(void);
+    void regist_Pointcloud(cv::Point2f _src, std::vector<bag_t> &_bag_cloud);
+    float get_dist2f(cv::Point2f _pt1, cv::Point2f _pt2)
+    {
+        return std::sqrt(std::pow(_pt1.x - _pt2.x, 2.0f) + std::pow(_pt1.y - _pt2.y, 2.0f));
+    }
+    cv::Point laser2grid(cv::Point2f _laser_pt, int _gui_margin, allen::Grid_param _grid_param);
+    cv::Point2f grid2laser(cv::Point _canvas_grid_pt, int _gui_margin, allen::Grid_param _grid_param);
     void GetMouseEvent(cv::Mat &_canvas);
     void set_Target(std::vector<allen::Target> &_target, cv::Rect _target_rect);
-    void tracking_Targets(std::vector<allen::Target> &_target, std::vector<bag_t> &_bag_cloud);
+    void tracking_Targets(std::vector<allen::Target> &_target);
     void runLoop(void);
 
 };
