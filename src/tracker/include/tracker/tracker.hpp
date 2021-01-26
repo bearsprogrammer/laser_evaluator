@@ -19,7 +19,7 @@
 #define SCALEFACTOR_2 1.0f
 #define SCALEFACTOR_3 0.975f
 #define SCALEFACTOR_4 0.899f
-#define TARGETNUM 2
+#define TARGETNUM 1 
 #define TRACKING_RADIUS 500.0f
 #define GUI_MARGIN 100
 
@@ -88,7 +88,7 @@ public:
             //delete *it_bag;
     }
     void display_Globalmap(void);
-    void regist_Pointcloud(cv::Point2f _src, std::vector<bag_t> &_bag_cloud);
+    void regist_Pointcloud(cv::Point _target_src, std::vector<bag_t> &_bag_cloud);
     float get_dist2f(cv::Point2f _pt1, cv::Point2f _pt2)
     {
         return std::sqrt(std::pow(_pt1.x - _pt2.x, 2.0f) + std::pow(_pt1.y - _pt2.y, 2.0f));

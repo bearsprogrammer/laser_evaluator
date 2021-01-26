@@ -199,55 +199,59 @@ void tracker::tracking_Targets(std::vector<allen::Target> &_target)
         //grid2laser
         cv::Point grid_pt = tmp_target.center_pt;
         printf("[target_%d]->[gx: %d][gy: %d]\n", i, tmp_target.center_pt.x, tmp_target.center_pt.y);
-        cv::Point2f laser_pt = grid2laser(grid_pt, GUI_MARGIN, grid);   //target
+        //cv::Point2f laser_pt = grid2laser(grid_pt, GUI_MARGIN, grid);   //target
 
         //measure dist
-        regist_Pointcloud(laser_pt, bag_cloud_);
-
-        cv::rectangle(gui.canvas, tmp_target.target_rect, cv::Scalar(255,0,0), 2);
-        cv::circle(gui.canvas, grid_pt, 3, cv::Scalar(0,255,255));
+        //regist_Pointcloud(laser_pt, bag_cloud_);
+        regist_Pointcloud(grid_pt, bag_cloud_);
     }
     //cv::imshow("debug", gui.canvas);
     //cv::waitKey(0);
 
 
 }
-void tracker::regist_Pointcloud(cv::Point2f _target_src, std::vector<bag_t> &_bag_cloud)
+void tracker::regist_Pointcloud(cv::Point _target_src, std::vector<bag_t> &_bag_cloud)
 {
+
+    std::vector<cv::Point> target_grid_pointcloud;
+
     for(int i = 0; i < (int)_bag_cloud.size(); i++)         //each of frame
     {
         bag_t tmp_pointcloud = _bag_cloud[i];
-        std::vector<cv::Point2f> tmp_inlier;
+        std::vector<cv::Point> tmp_inlier;
         tmp_inlier.reserve((int)tmp_pointcloud.size());
 
-        cv::Point target_grid, laser_grid;
-        target_grid = laser2grid(_target_src, GUI_MARGIN, grid);
+        //cv::Point target_grid, laser_grid;
+        //target_grid = laser2grid(_target_src, GUI_MARGIN, grid);
 
         for(int j = 0; j < (int)tmp_pointcloud.size(); j++)
         {
-            cv::Point2f laser_dst = tmp_pointcloud[j].laser_coordinate_;
+            //cv::Point2f laser_dst = tmp_pointcloud[j].laser_coordinate_;
+            cv::Point laser_dst = laser2grid(tmp_pointcloud[j].laser_coordinate_, GUI_MARGIN, grid);
 
             float dist = get_dist2f(_target_src, laser_dst);
                 //printf("[laser_coordinate (%d/%d)]-> [src: %f, %f][dst: %f, %f]-> dist: %f\n", 
                         //j, (int)tmp_pointcloud.size(), _target_src.x, _target_src.y, laser_dst.x, laser_dst.y, dist);
-            laser_grid = laser2grid(laser_dst, GUI_MARGIN, grid);
-            printf("grid_pt-> [src: %d, %d][dst: %d, %d]\n", target_grid.x, target_grid.y, laser_grid.x, laser_grid.y);
-
-            if(dist < TRACKING_RADIUS) 
+            //laser_grid = laser2grid(laser_dst, GUI_MARGIN, grid);
+            printf("grid_pt-> [src: %d, %d][dst: %d, %d]\n", _target_src.x, _target_src.y, laser_dst.x, laser_dst.y);
+            float dist_radius = TRACKING_RADIUS * grid.mm2pixel;
+            if(dist < dist_radius) 
             {
                 //for debug
-                printf("[laser_coordinate (%d/%d)]-> [src: %f, %f][dst: %f, %f]-> dist: %f\n", 
+                printf("[laser_coordinate (%d/%d)]-> [src: %d, %d][dst: %d, %d]-> dist: %f\n", 
                         j, (int)tmp_pointcloud.size(), _target_src.x, _target_src.y, laser_dst.x, laser_dst.y, dist);
 
-                cv::line(gui.canvas, target_grid, laser_grid, cv::Scalar(0,0,255));
+                //cv::line(debug_mat, _target_src, laser_dst, cv::Scalar(0,0,255));
                 
-                cv::imshow("debug", gui.canvas);
-                cv::waitKey(0);
+                //cv::imshow("debug", gui.canvas);
+                //cv::waitKey(0);
 
                 tmp_inlier.push_back(laser_dst);
             }
         }
 
+        //cv::imshow("debug", debug_mat);
+        cv::waitKey(1);
         printf("[laser_%d size]-> %d\n", i, (int)tmp_inlier.size());
     }
 
@@ -255,11 +259,10 @@ void tracker::regist_Pointcloud(cv::Point2f _target_src, std::vector<bag_t> &_ba
 cv::Point tracker::laser2grid(cv::Point2f _laser_pt, int _gui_margin, allen::Grid_param _grid_param)
 {
     cv::Point output_grid;
-    output_grid.x = _grid_param.robot_col - _laser_pt.y * _grid_param.mm2pixel;
-    output_grid.y = _grid_param.robot_row - _laser_pt.x * _grid_param.mm2pixel;
-
-    output_grid.x += _gui_margin;
-    output_grid.y += _gui_margin;
+    int _robot_row = _grid_param.robot_row + _gui_margin;
+    int _robot_col = _grid_param.robot_col + _gui_margin;
+    output_grid.x = _robot_col - _laser_pt.y * _grid_param.mm2pixel;
+    output_grid.y = _robot_row - _laser_pt.x * _grid_param.mm2pixel;
 
     return output_grid;
 }
@@ -269,9 +272,12 @@ cv::Point2f tracker::grid2laser(cv::Point _canvas_grid_pt, int _gui_margin, alle
     cv::Point tmp_grid_ori;
     tmp_grid_ori.x = _canvas_grid_pt.x - _gui_margin;
     tmp_grid_ori.y = _canvas_grid_pt.y - _gui_margin;
+
+    int _robot_row = _grid_param.robot_row + _gui_margin;
+    int _robot_col = _grid_param.robot_col + _gui_margin;
     //printf("ori_grid: [%d, %d]\n", tmp_grid_ori.x, tmp_grid_ori.y);
-    output_laser.x = (_grid_param.robot_row - tmp_grid_ori.y) / _grid_param.mm2pixel;
-    output_laser.y = (_grid_param.robot_col - tmp_grid_ori.x) / _grid_param.mm2pixel;
+    output_laser.x = (_robot_row - _canvas_grid_pt.y) / _grid_param.mm2pixel;
+    output_laser.y = (_robot_col - _canvas_grid_pt.x) / _grid_param.mm2pixel;
     //printf("laser: [%f, %f]\n\n", output_laser.x, output_laser.y);
 
     return output_laser;
