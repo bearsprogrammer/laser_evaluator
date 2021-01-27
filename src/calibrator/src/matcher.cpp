@@ -395,16 +395,16 @@ bool matcher::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::I
 		cv::Mat from_inlier, to_inlier;
 		match(flann_idx, points, to, from_inlier, to_inlier, ratio, matching_draw);
 
-		if(!matching_draw.empty())
-		{
-			cv::putText(matching_draw, 
-				cv::format("iter: %d x: %.5lf y: %.5lf th: %.5lf", 
-					iter, output.x, output.y, output.th), 
-				cv::Point(15, 25), 0, 0.5, cv::Scalar(0, 0, 0)
-			);
-			bool success = cv::imwrite(cv::format("/home/allenkim/log/%lf.jpg", 
-				ros::Time::now().toSec()), matching_draw);
-		}
+		//if(!matching_draw.empty())
+		//{
+			//cv::putText(matching_draw, 
+				//cv::format("iter: %d x: %.5lf y: %.5lf th: %.5lf", 
+					//iter, output.x, output.y, output.th), 
+				//cv::Point(15, 25), 0, 0.5, cv::Scalar(0, 0, 0)
+			//);
+			//bool success = cv::imwrite(cv::format("/home/allenkim/log/%lf.jpg", 
+				//ros::Time::now().toSec()), matching_draw);
+		//}
 
 		if(from_inlier.rows <= 10 || to_inlier.rows <= 10)
 		{

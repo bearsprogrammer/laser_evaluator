@@ -3,6 +3,7 @@
         "/home/allenkim/allen_workspace/git/laser_evaluator/devel/lib/python2.7/dist-packages",
         "/opt/ros/melodic/lib/python2.7/dist-packages"
     ],
+    //"powermode.enabled": true,
     "files.associations": {
         "*.tcc": "cpp",
         "cmath": "cpp",

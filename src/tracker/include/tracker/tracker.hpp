@@ -15,10 +15,10 @@
 
 #define SENSORNUM 4
 #define SRCFRAME 1 
-#define SCALEFACTOR_1 0.92f
+#define SCALEFACTOR_1 1.0f
 #define SCALEFACTOR_2 1.0f
-#define SCALEFACTOR_3 0.975f
-#define SCALEFACTOR_4 0.899f
+#define SCALEFACTOR_3 1.0f
+#define SCALEFACTOR_4 1.0f
 #define TARGETNUM 1 
 #define TRACKING_RADIUS 500.0f
 #define GUI_MARGIN 100
