@@ -165,6 +165,12 @@ void tracker::display_Globalmap(void)
                         //cv::Point(grid_global.grid_col, grid_global.robot_row), cv::Scalar(0,0,255));
     //cv::line(Canvas, cv::Point(grid_global.robot_col, 0), 
                         //cv::Point(grid_global.robot_col, grid_global.grid_row), cv::Scalar(0,0,255));
+    for(int i = 0; i < (int)target_.size(); i++)
+    {
+        if(std::isinf(target_[i].centroid_pt.x) || std::isinf(target_[i].centroid_pt.y))    continue;
+        cv::Point tmp_center_pt = laser2grid(target_[i].centroid_pt, grid_global.base_pt[SRCFRAME], grid_global.mm2pixel);
+        cv::circle(Canvas, tmp_center_pt, target_[i].target_radius * grid_tracker.mm2pixel, cv::Scalar(0,0,255), 2);
+    }
 
     Globalmap = Canvas.clone();
     if(gui.initialize)  
@@ -175,7 +181,7 @@ void tracker::display_Globalmap(void)
             flag.set_flag_off(allen::FLAG::Name::initTarget);
             gui.clicked_button(gui.canvas, gui.b_init);
         }
-        gui.display_grid(gui.canvas, Globalmap, drag_rect, grid_global, flag.get_flag(allen::FLAG::Name::initTarget));
+        gui.display_grid(gui.canvas, Globalmap, grid_global, flag.get_flag(allen::FLAG::Name::initTarget));
     }
 }
 void tracker::set_Target(std::vector<allen::Target> &_target, cv::Rect _target_rect)
@@ -216,17 +222,18 @@ void tracker::tracking_Targets(std::vector<allen::Target> &_target)
         cv::Point2f centroid_laser = rearrange_Centroid(grid_pt, laser_pt, bag_cloud_, tmp_debug_mat);
 
         if(std::isinf(centroid_laser.x) || std::isinf(centroid_laser.y))     continue;
-        printf("centroid: [%f, %f]\n", centroid_laser.x, centroid_laser.y);
+        //printf("centroid: [%f, %f]\n", centroid_laser.x, centroid_laser.y);
 
+        tmp_target.centroid_pt = centroid_laser;
         tmp_target.center_pt = laser2grid(centroid_laser, grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
 
-        cv::circle(tmp_debug_mat, tmp_target.center_pt, tmp_target.target_radius * grid_tracker.mm2pixel, 
-                    cv::Scalar(255,255,255));
+        //cv::circle(tmp_debug_mat, tmp_target.center_pt, tmp_target.target_radius * grid_tracker.mm2pixel, 
+                    //cv::Scalar(0,0,255), 2);
 
         //new centroid to target
         _target[i] = tmp_target;
     }
-    cv::imshow("debug", tmp_debug_mat);
+    //cv::imshow("debug", tmp_debug_mat);
     //cv::waitKey(0);
 
 
@@ -262,7 +269,7 @@ cv::Point2f tracker::rearrange_Centroid(cv::Point _grid_src, cv::Point2f _laser_
                 //laser2grid
                 cv::Point tmp_scan_pt = laser2grid(tmp_lpc.laser_coordinate_, grid_tracker.base_pt[SRCFRAME], 
                                                     grid_tracker.mm2pixel);
-                cv::line(_debug_mat, _grid_src, tmp_scan_pt, tmp_scalar, 1);
+                //cv::line(_debug_mat, _grid_src, tmp_scan_pt, tmp_scalar, 1);
             }
 
         }
@@ -336,8 +343,11 @@ void tracker::GetMouseEvent(cv::Mat &_canvas)
 
         bool valid_init_b = false;
         bool valid_calib_b = false;
+        bool valid_reset_b = false;
+
         if(gui.b_init.rect.contains(m_pt))      valid_init_b = true;
         if(gui.b_calib.rect.contains(m_pt))     valid_calib_b = true;
+        if(gui.b_reset.rect.contains(m_pt))     valid_reset_b = true;
         if(valid_init_b)
         {
             gui.clicked_button(_canvas, gui.b_init);
@@ -348,6 +358,11 @@ void tracker::GetMouseEvent(cv::Mat &_canvas)
             gui.clicked_button(_canvas, gui.b_calib);
             flag.set_flag_on(allen::FLAG::Name::calibration);
         }
+        if(valid_reset_b)
+        {
+            gui.clicked_button(_canvas, gui.b_reset);
+            flag.set_flag_on(allen::FLAG::Name::reset);
+        }
     }
     if(flag.get_flag(allen::FLAG::Name::initTarget))
     {
@@ -356,20 +371,20 @@ void tracker::GetMouseEvent(cv::Mat &_canvas)
             cv::Point m_drag_pt(gui.mi.getX(), gui.mi.getY());
             if(gui.d_map.rect.contains(m_drag_pt))
             {
-                //printf("drag_[x: %d, y: %d][x: %d, y: %d]\n", 
-                        //gui.mi.drag_s_pt.x, gui.mi.drag_s_pt.y, m_drag_pt.x, m_drag_pt.y);
-                drag_rect = cv::Rect(gui.mi.drag_s_pt, m_drag_pt);
-                //printf("rect[tl: %d, %d][br: %d, %d]\n\n", drag_rect.tl().x, drag_rect.tl().y,
-                                                            //drag_rect.br().x, drag_rect.br().y);
-                //ROS_INFO("rect[tl: %d, %d][br: %d, %d]", drag_rect.tl().x, drag_rect.tl().y,
-                                                            //drag_rect.br().x, drag_rect.br().y);
+                gui.drag_rect = cv::Rect(gui.mi.drag_s_pt, m_drag_pt);
                 flag.set_flag_on(allen::FLAG::Name::setRect);
             }
         }
     }
     if(flag.get_flag(allen::FLAG::Name::setRect) && m_up)
-        set_Target(target_, drag_rect);
-
+        set_Target(target_, gui.drag_rect);
+    if(flag.get_flag(allen::FLAG::Name::reset))
+    {
+        //reset
+        target_.clear();
+        flag.resetFlag();
+        gui.reset(_canvas);
+    }
 }
 void tracker::get_syncData(void)
 {
@@ -402,7 +417,7 @@ void tracker::runLoop(void)
             if(flag.get_flag(allen::FLAG::Name::imshow))
             {
                 display_Globalmap();
-                cv::imshow("GlobalMap", Globalmap);         //calibrated pointcloud
+                //cv::imshow("GlobalMap", Globalmap);         //calibrated pointcloud
                 cv::imshow(gui.canvas_win, gui.canvas);     //gui
                 cv::waitKey(10);
             }

@@ -12,7 +12,8 @@ namespace allen
             initTarget,
             calibration,
             setRect,
-            targetOn
+            targetOn,
+            reset
         };
         std::vector<std::pair<Name, bool> > data;
         std::vector<std::pair<Name, bool> > init_data;
@@ -26,6 +27,7 @@ namespace allen
             push_flag(FLAG::Name::calibration, false);
             push_flag(FLAG::Name::setRect, false);
             push_flag(FLAG::Name::targetOn, false);
+            push_flag(FLAG::Name::reset, false);
         }
         ~FLAG()
         {}

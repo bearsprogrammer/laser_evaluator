@@ -124,9 +124,10 @@ namespace allen
         std::string canvas_win;
         //MouseInterface mi = MouseInterface(1);
         MouseInterface mi;
-        button b_init, b_calib;
+        button b_init, b_calib, b_reset;
         Display d_map;
         bool initialize;
+        cv::Rect drag_rect;
 
     private:
         void add_button(cv::Mat &_canvas, button &_button, cv::Point _base_pt)
@@ -186,6 +187,15 @@ namespace allen
             }
             add_button(canvas, b_calib, this->base_pt);
 
+            this->base_pt.x -= margin + b_reset.rect.width;
+            if(this->base_pt.x < 0 || this->base_pt.y < 0)
+            {
+                ROS_ERROR("[gui]base_pt is out of range..");
+                this->initialize = false;
+                return;
+            }
+            add_button(canvas, b_reset, this->base_pt);
+
             //display
             this->base_d_pt.x = this->margin_canvas;
             this->base_d_pt.y = this->margin_canvas;
@@ -210,12 +220,25 @@ namespace allen
             mi = MouseInterface(1);
             b_init = button("Initialize", cv::Scalar(255,255,255));
             b_calib = button("Calibration", cv::Scalar(255,255,255));
+            b_reset = button("Reset", cv::Scalar(255,255,255));
             d_map = Display("Globalmap", cv::Scalar(125,125,125), _grid_size);
             init_Canvas(canvas_s);
         }
         GUI(){};
         ~GUI()
         {}
+        void reset(cv::Mat &_canvas)
+        {
+            b_init.clicked = true;
+            b_calib.clicked = true;
+            b_reset.clicked = true;
+            clicked_button(_canvas, b_init);
+            clicked_button(_canvas, b_calib);
+            clicked_button(_canvas, b_reset);
+            drag_rect = cv::Rect();
+
+            ROS_INFO("GUI is reset!");
+        }
         void clicked_button(cv::Mat &_canvas, button &_button)
         {
             if(!this->initialize)   return;
@@ -241,7 +264,7 @@ namespace allen
             tmp_ROI.copyTo(_canvas.rowRange(front.y, tail.y).colRange(front.x, tail.x));
             ROS_INFO("[gui]->[%s]button is clicked![%d]", _button.name.c_str(), _button.clicked);
         }
-        void display_grid(cv::Mat &_canvas, cv::Mat &_stream_map, cv::Rect &_drag_rect, Grid_param &_grid_p, bool mode)
+        void display_grid(cv::Mat &_canvas, cv::Mat &_stream_map, Grid_param &_grid_p, bool mode)
         {
             if(_canvas.empty() || _stream_map.empty())  return;
 
@@ -257,15 +280,15 @@ namespace allen
             src.copyTo(dst.rowRange(front.y, tail.y).colRange(front.x, tail.x));
 
             //drag rect
-            if(_drag_rect.x != 0 && _drag_rect.y != 0 && mode)
+            if(this->drag_rect.x != 0 && this->drag_rect.y != 0 && mode)
             {
                 //hori
-                cv::line(dst, cv::Point(front.x, _drag_rect.br().y), 
-                                    cv::Point(tail.x, _drag_rect.br().y), cv::Scalar(0,0,255));
+                cv::line(dst, cv::Point(front.x, this->drag_rect.br().y), 
+                                    cv::Point(tail.x, this->drag_rect.br().y), cv::Scalar(0,0,255));
                 //verti
-                cv::line(dst, cv::Point(_drag_rect.br().x, front.y), 
-                                    cv::Point(_drag_rect.br().x, tail.y), cv::Scalar(0,0,255));
-                cv::rectangle(dst, _drag_rect, cv::Scalar(255,0,0), 2);
+                cv::line(dst, cv::Point(this->drag_rect.br().x, front.y), 
+                                    cv::Point(this->drag_rect.br().x, tail.y), cv::Scalar(0,0,255));
+                cv::rectangle(dst, this->drag_rect, cv::Scalar(255,0,0), 2);
             }
 
             this->canvas = dst.clone(); 

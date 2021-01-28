@@ -16,7 +16,7 @@ namespace allen
         {
             robot_col = grid_col / 2;
             robot_row = grid_row / 2;
-            mm2pixel = 50.0f / 1500.0f;     //1000mm(1m) -> 50 pixel, 20mm -> 1 pixel
+            mm2pixel = 50.0f / 1000.0f;     //1000mm(1m) -> 50 pixel, 20mm -> 1 pixel
             occup = cv::Mat(grid_row, grid_col, CV_8UC3, cv::Scalar(0,0,0));
             free = cv::Mat(grid_row, grid_col, CV_8UC3, cv::Scalar(0,0,0));
         }

@@ -25,16 +25,26 @@ namespace allen
         int target_idx;
         cv::Rect target_rect;
         cv::Point center_pt;
+        cv::Point2f centroid_pt;
         float target_radius;
 
     public:
         Target()    :
             target_idx(0)
         {
-
+            reset();
         }
         ~Target()
         {}
+        void reset()
+        {
+            target_idx = 0;
+            target_rect = cv::Rect();
+            center_pt = cv::Point();
+            centroid_pt.x = std::numeric_limits<float>::infinity();
+            centroid_pt.y = std::numeric_limits<float>::infinity();
+            target_radius = std::numeric_limits<float>::infinity();
+        }
         void set_Centerpt()
         {
             if(this->target_rect.width <= 0 || this->target_rect.height <= 0)
