@@ -19,9 +19,10 @@
 #define SCALEFACTOR_2 1.0f
 #define SCALEFACTOR_3 1.0f
 #define SCALEFACTOR_4 1.0f
-#define TARGETNUM 1 
+#define TARGETNUM 2 
 #define TRACKING_RADIUS 500.0f
 #define GUI_MARGIN 100
+#define GRID_MARGIN 300.0f
 
 using bag_t = std::vector<allen::LaserPointCloud>;
 
@@ -31,13 +32,15 @@ private:
     ros::NodeHandle nh_;
     ros::Subscriber scan_1_sub_, scan_2_sub_, scan_3_sub_, scan_4_sub_;
     double degree2radian, radian2degree;
-    cv::RNG rng; allen::FLAG flag;
+    cv::RNG rng; 
+    allen::FLAG flag;
     cv::Rect drag_rect;
+    float margin_grid_tracker;
 
 public:
     std::vector<sensor*> sensors;
     std::vector<float> scale_factor;
-    allen::Grid_param grid;
+    allen::Grid_param grid, grid_tracker;
     cv::Mat Globalmap;
     std::vector<bag_t> bag_cloud_;
     allen::GUI gui;
@@ -76,6 +79,13 @@ public:
         scale_factor.push_back(SCALEFACTOR_3);
         scale_factor.push_back(SCALEFACTOR_4);
 
+        margin_grid_tracker = GRID_MARGIN + GUI_MARGIN;
+        grid_tracker.base_pt.push_back(cv::Point2f(margin_grid_tracker, margin_grid_tracker));
+        grid_tracker.base_pt.push_back(cv::Point2f(margin_grid_tracker, (float)gui.canvas_s.height - margin_grid_tracker));
+        grid_tracker.base_pt.push_back(cv::Point2f((float)gui.canvas_s.width - margin_grid_tracker, margin_grid_tracker));
+        grid_tracker.base_pt.push_back(cv::Point2f((float)gui.canvas_s.width - margin_grid_tracker, 
+                                                    (float)gui.canvas_s.height - margin_grid_tracker));
+
         initSubscriber();
     }
     ~tracker()
@@ -88,13 +98,14 @@ public:
             //delete *it_bag;
     }
     void display_Globalmap(void);
-    void regist_Pointcloud(cv::Point _target_src, std::vector<bag_t> &_bag_cloud);
-    float get_dist2f(cv::Point2f _pt1, cv::Point2f _pt2)
+    cv::Point2f rearrange_Centroid(cv::Point _grid_src, cv::Point2f _laser_src, std::vector<bag_t> &_bag_cloud, cv::Mat &_debug_mat);
+    cv::Point2f calc_Mean(bag_t _src);                                              //TODO: make to templete for tool library
+    float get_dist2f(cv::Point2f _pt1, cv::Point2f _pt2)                            //TODO: make to templete for tool library
     {
         return std::sqrt(std::pow(_pt1.x - _pt2.x, 2.0f) + std::pow(_pt1.y - _pt2.y, 2.0f));
     }
-    cv::Point laser2grid(cv::Point2f _laser_pt, int _gui_margin, allen::Grid_param _grid_param);
-    cv::Point2f grid2laser(cv::Point _canvas_grid_pt, int _gui_margin, allen::Grid_param _grid_param);
+    cv::Point laser2grid(cv::Point2f _src_pt, cv::Point _base_pt, float _scale);    //TODO: make to templete for tool library
+    cv::Point2f grid2laser(cv::Point _src_pt, cv::Point _base_pt, float _scale);    //TODO: make to templete for tool library
     void GetMouseEvent(cv::Mat &_canvas);
     void set_Target(std::vector<allen::Target> &_target, cv::Rect _target_rect);
     void tracking_Targets(std::vector<allen::Target> &_target);

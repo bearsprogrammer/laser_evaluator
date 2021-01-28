@@ -812,12 +812,14 @@ void matcher::runLoop()
         display_Globalmap();
 
         //display
-        for(int i = 0; i < (int)sensors.size(); i++)
-            cv::imshow(sensors[i]->child_frame, sensors[i]->Grid_local);
-        cv::imshow("Globalmap", Globalmap);
-        cv::imshow("Globalmap_calib", Globalmap_calib);
-        cv::waitKey(10);
-
+		if(imshow)
+		{
+			for(int i = 0; i < (int)sensors.size(); i++)
+				cv::imshow(sensors[i]->child_frame, sensors[i]->Grid_local);
+			cv::imshow("Globalmap", Globalmap);
+			cv::imshow("Globalmap_calib", Globalmap_calib);
+			cv::waitKey(10);
+		}
         ros::spinOnce();
         r.sleep();
     }

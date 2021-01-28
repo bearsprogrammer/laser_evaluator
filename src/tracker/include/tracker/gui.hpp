@@ -115,11 +115,11 @@ namespace allen
     class GUI
     {
     private:
-        cv::Size canvas_s;
         cv::Point base_pt, base_d_pt;
         int margin_canvas;
 
     public:
+        cv::Size canvas_s;
         cv::Mat canvas;
         std::string canvas_win;
         //MouseInterface mi = MouseInterface(1);
