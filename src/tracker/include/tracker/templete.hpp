@@ -27,6 +27,8 @@ namespace allen
         cv::Point center_pt;
         cv::Point2f centroid_pt;
         float target_radius;
+        std::vector<cv::Point2f> object_pts, src_object_pts;
+        cv::Mat src_dp_mat;
 
     public:
         Target()    :
@@ -44,6 +46,9 @@ namespace allen
             centroid_pt.x = std::numeric_limits<float>::infinity();
             centroid_pt.y = std::numeric_limits<float>::infinity();
             target_radius = std::numeric_limits<float>::infinity();
+            object_pts = std::vector<cv::Point2f>();
+            src_object_pts = std::vector<cv::Point2f>();
+            src_dp_mat = cv::Mat();
         }
         void set_Centerpt()
         {

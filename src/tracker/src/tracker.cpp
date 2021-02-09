@@ -105,9 +105,9 @@ void tracker::display_Globalmap(void)
     //float margin_grid = 300.0f;
     float margin_grid = GRID_MARGIN; 
 
-    grid_global.base_pt.push_back(cv::Point2f(margin_grid, margin_grid));
     grid_global.base_pt.push_back(cv::Point2f(margin_grid, (float)grid_global.grid_row-margin_grid));
     grid_global.base_pt.push_back(cv::Point2f((float)grid_global.grid_col-margin_grid, margin_grid));
+    grid_global.base_pt.push_back(cv::Point2f(margin_grid, margin_grid));
     grid_global.base_pt.push_back(cv::Point2f((float)grid_global.grid_col-margin_grid, (float)grid_global.grid_row-margin_grid));
 
     cv::Point2f tmp_base_pt = grid_global.base_pt[SRCFRAME];
@@ -197,11 +197,52 @@ void tracker::set_Target(std::vector<allen::Target> &_target, cv::Rect _target_r
     tmp_target.target_rect = _target_rect;
     tmp_target.set_Centerpt();
     tmp_target.target_radius = TRACKING_RADIUS;
+    extract_Shape(tmp_target);
 
     _target.push_back(tmp_target);
     printf("[target_]-> size: %d, idx: %d, rect: [w:%d, h:%d]\n", (int)_target.size(),
             _target.back().target_idx, _target.back().target_rect.width, _target.back().target_rect.height);
     flag.set_flag_off(allen::FLAG::Name::setRect);
+}
+void tracker::extract_Shape(allen::Target &_target)
+{
+    if(_target.target_idx != ROBOT_IDX)     return;
+
+    cv::Rect tmp_rect = _target.target_rect;
+    cv::Mat debug_mat(300, 300, CV_8UC3, cv::Scalar(0,0,0));
+    cv::Mat tmp_canvas = gui.canvas.clone();
+
+    for(int i = 0; i < (int)bag_cloud_.size(); i++)
+    {
+        bag_t tmp_bag = bag_cloud_[i];
+        for(int j = 0; j < (int)tmp_bag.size(); j++)
+        {
+            allen::LaserPointCloud tmp_cloud = tmp_bag[j];
+            cv::Point grid_pt = laser2grid(tmp_cloud.laser_coordinate_, grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
+
+            bool valid_pt = false;
+            if(tmp_rect.contains(grid_pt))  valid_pt = true;
+            if(valid_pt)
+            {
+                _target.src_object_pts.push_back(tmp_cloud.laser_coordinate_);
+            }
+        }
+    }
+    if(_target.src_object_pts.empty())
+        ROS_ERROR("Contour of Robot is empty..");
+    else
+    {
+        _target.src_dp_mat = tmp_canvas(tmp_rect);
+        ROS_INFO("Number of Point-cloud for Robot contour is set: %d", (int)_target.src_object_pts.size());
+    }
+
+    if(!_target.src_dp_mat.empty())
+    {
+        cv::Mat resize_contour;
+        cv::Size tmp_size(_target.src_dp_mat.cols * 2.0, _target.src_dp_mat.rows * 2.0);
+        cv::resize(_target.src_dp_mat, resize_contour, tmp_size, CV_INTER_LINEAR);
+        cv::imshow("contour", resize_contour);
+    }
 }
 void tracker::tracking_Targets(std::vector<allen::Target> &_target)
 {
@@ -218,12 +259,15 @@ void tracker::tracking_Targets(std::vector<allen::Target> &_target)
         //printf("[target_%d]->[gx: %d][gy: %d]\n", i, tmp_target.center_pt.x, tmp_target.center_pt.y);
 
         //cv::rectangle(tmp_debug_mat, _target[i].target_rect, cv::Scalar(255,0,0), 2);
-
-        cv::Point2f centroid_laser = rearrange_Centroid(grid_pt, laser_pt, bag_cloud_, tmp_debug_mat);
+        std::vector<cv::Point2f> tmp_pts;
+        cv::Point2f centroid_laser = rearrange_Centroid(grid_pt, laser_pt, bag_cloud_, tmp_debug_mat, tmp_pts);
 
         if(std::isinf(centroid_laser.x) || std::isinf(centroid_laser.y))     continue;
+        
         //printf("centroid: [%f, %f]\n", centroid_laser.x, centroid_laser.y);
 
+        //update
+        tmp_target.object_pts = tmp_pts;
         tmp_target.centroid_pt = centroid_laser;
         tmp_target.center_pt = laser2grid(centroid_laser, grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
 
@@ -233,25 +277,38 @@ void tracker::tracking_Targets(std::vector<allen::Target> &_target)
         //new centroid to target
         _target[i] = tmp_target;
     }
+
+    match_Robot(_target);
+    //std::cout << std::endl;
+    //std::cout << std::endl;
     //cv::imshow("debug", tmp_debug_mat);
     //cv::waitKey(0);
+}
+void tracker::match_Robot(std::vector<allen::Target> &_target)
+{
+    if((int)_target.size() != TARGETNUM)    return;
 
+    std::vector<cv::Point2f> src_points;
+    std::vector<cv::Point2f> dst_points;
 
 }
 cv::Point2f tracker::rearrange_Centroid(cv::Point _grid_src, cv::Point2f _laser_src, std::vector<bag_t> &_bag_cloud, 
-                                    cv::Mat &_debug_mat)
+                                    cv::Mat &_debug_mat, std::vector<cv::Point2f> &_tmp_object_pts)
 {
     if((int)grid_tracker.base_pt.size() == 0)   
     {
         ROS_ERROR("[tracker]Not enough samples to calc centroid..");
         cv::Point2f inf_pt;
+        bag_t empty_bag;
         inf_pt.x = std::numeric_limits<float>::infinity();
         inf_pt.y = std::numeric_limits<float>::infinity();
+
         return inf_pt;
     }
 
     bag_t tmp_target_bag;
     cv::Point2f centroid;
+    std::vector<cv::Point2f> tmp_object_pts;
 
     for(int i = 0; i < (int)_bag_cloud.size(); i++)
     {
@@ -265,6 +322,7 @@ cv::Point2f tracker::rearrange_Centroid(cv::Point _grid_src, cv::Point2f _laser_
             if(dist <= TRACKING_RADIUS)
             {
                 tmp_target_bag.push_back(tmp_lpc);
+                tmp_object_pts.push_back(tmp_lpc.laser_coordinate_);
 
                 //laser2grid
                 cv::Point tmp_scan_pt = laser2grid(tmp_lpc.laser_coordinate_, grid_tracker.base_pt[SRCFRAME], 
@@ -276,7 +334,7 @@ cv::Point2f tracker::rearrange_Centroid(cv::Point _grid_src, cv::Point2f _laser_
     }
 
     centroid = calc_Mean(tmp_target_bag);
-
+    _tmp_object_pts.swap(tmp_object_pts);
     //cv::imshow("debug", _debug_mat);
 
     return centroid;

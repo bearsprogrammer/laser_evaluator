@@ -14,15 +14,16 @@
 #include "tracker/gui.hpp"
 
 #define SENSORNUM 4
-#define SRCFRAME 1 
+#define SRCFRAME 0
 #define SCALEFACTOR_1 1.0f
 #define SCALEFACTOR_2 1.0f
 #define SCALEFACTOR_3 1.0f
 #define SCALEFACTOR_4 1.0f
-#define TARGETNUM 2 
-#define TRACKING_RADIUS 400.0f
+#define TARGETNUM 4
+#define TRACKING_RADIUS 300.0f
 #define GUI_MARGIN 100
 #define GRID_MARGIN 300.0f
+#define ROBOT_IDX 0
 
 using bag_t = std::vector<allen::LaserPointCloud>;
 
@@ -34,7 +35,6 @@ private:
     double degree2radian, radian2degree;
     cv::RNG rng; 
     allen::FLAG flag;
-    cv::Rect drag_rect;
     float margin_grid_tracker;
 
 public:
@@ -80,9 +80,9 @@ public:
         scale_factor.push_back(SCALEFACTOR_4);
 
         margin_grid_tracker = GRID_MARGIN + GUI_MARGIN;
-        grid_tracker.base_pt.push_back(cv::Point2f(margin_grid_tracker, margin_grid_tracker));
         grid_tracker.base_pt.push_back(cv::Point2f(margin_grid_tracker, (float)gui.canvas_s.height - margin_grid_tracker));
         grid_tracker.base_pt.push_back(cv::Point2f((float)gui.canvas_s.width - margin_grid_tracker, margin_grid_tracker));
+        grid_tracker.base_pt.push_back(cv::Point2f(margin_grid_tracker, margin_grid_tracker));
         grid_tracker.base_pt.push_back(cv::Point2f((float)gui.canvas_s.width - margin_grid_tracker, 
                                                     (float)gui.canvas_s.height - margin_grid_tracker));
 
@@ -98,7 +98,9 @@ public:
             //delete *it_bag;
     }
     void display_Globalmap(void);
-    cv::Point2f rearrange_Centroid(cv::Point _grid_src, cv::Point2f _laser_src, std::vector<bag_t> &_bag_cloud, cv::Mat &_debug_mat);
+    void match_Robot(std::vector<allen::Target> &_target);
+    cv::Point2f rearrange_Centroid(cv::Point _grid_src, cv::Point2f _laser_src, std::vector<bag_t> &_bag_cloud, 
+                                        cv::Mat &_debug_mat, std::vector<cv::Point2f> &_tmp_object_pts);
     cv::Point2f calc_Mean(bag_t _src);                                              //TODO: make to templete for tool library
     float get_dist2f(cv::Point2f _pt1, cv::Point2f _pt2)                            //TODO: make to templete for tool library
     {
@@ -108,6 +110,7 @@ public:
     cv::Point2f grid2laser(cv::Point _src_pt, cv::Point _base_pt, float _scale);    //TODO: make to templete for tool library
     void GetMouseEvent(cv::Mat &_canvas);
     void set_Target(std::vector<allen::Target> &_target, cv::Rect _target_rect);
+    void extract_Shape(allen::Target &_target);
     void tracking_Targets(std::vector<allen::Target> &_target);
     void runLoop(void);
 

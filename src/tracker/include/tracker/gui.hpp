@@ -138,10 +138,6 @@ namespace allen
             tail.x = _base_pt.x + _button.rect.width;
             tail.y = _base_pt.y + _button.rect.height;
 
-            //printf("canvas-> [r: %d], [c: %d]\n", _canvas.rows, _canvas.cols);
-            //printf("ROI-> [r: %d][c: %d]\n", _button.ROI.rows, _button.ROI.cols);
-            //printf("f[%d, %d], t[%d, %d]\n\n", front.x, front.y, tail.x, tail.y);
-
             _button.ROI.copyTo(_canvas.rowRange(front.y, tail.y).colRange(front.x, tail.x));
             _button.button_pt = _base_pt;
             _button.rect = cv::Rect(_base_pt.x, _base_pt.y, _button.rect.width, _button.rect.height);

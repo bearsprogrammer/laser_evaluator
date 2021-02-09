@@ -14,7 +14,7 @@
 #include "calibrator/sensor.hpp"
 
 #define SENSORNUM 4
-#define SRCFRAME 1 
+#define SRCFRAME 0
 #define SCALEFACTOR_1 1.0f
 #define SCALEFACTOR_2 1.0f
 #define SCALEFACTOR_3 1.0f

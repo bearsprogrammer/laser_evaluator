@@ -633,9 +633,9 @@ void matcher::display_Globalmap(void)
 
     float margin_grid = 300.0f;
 
-    grid_global.base_pt.push_back(cv::Point2f(margin_grid, margin_grid));
     grid_global.base_pt.push_back(cv::Point2f(margin_grid, (float)grid_global.grid_row-margin_grid));
     grid_global.base_pt.push_back(cv::Point2f((float)grid_global.grid_col-margin_grid, margin_grid));
+    grid_global.base_pt.push_back(cv::Point2f(margin_grid, margin_grid));
     grid_global.base_pt.push_back(cv::Point2f((float)grid_global.grid_col-margin_grid, (float)grid_global.grid_row-margin_grid));
 
     cv::Point2f tmp_base_pt = grid_global.base_pt[SRCFRAME];
