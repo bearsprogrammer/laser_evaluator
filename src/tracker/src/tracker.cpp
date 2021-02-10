@@ -288,8 +288,8 @@ void tracker::match_Robot(std::vector<allen::Target> &_target)
 {
     if((int)_target.size() != TARGETNUM)    return;
 
-    std::vector<cv::Point2f> src_points;
-    std::vector<cv::Point2f> dst_points;
+    std::vector<cv::Point2f> src_points = _target[ROBOT_IDX].src_object_pts;
+    //std::vector<cv::Point2f> dst_points = 
 
 }
 cv::Point2f tracker::rearrange_Centroid(cv::Point _grid_src, cv::Point2f _laser_src, std::vector<bag_t> &_bag_cloud, 
