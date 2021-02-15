@@ -197,14 +197,14 @@ void tracker::set_Target(std::vector<allen::Target> &_target, cv::Rect _target_r
     tmp_target.target_rect = _target_rect;
     tmp_target.set_Centerpt();
     tmp_target.target_radius = TRACKING_RADIUS;
-    extract_Shape(tmp_target);
+    init_SRC(tmp_target);
 
     _target.push_back(tmp_target);
     printf("[target_]-> size: %d, idx: %d, rect: [w:%d, h:%d]\n", (int)_target.size(),
             _target.back().target_idx, _target.back().target_rect.width, _target.back().target_rect.height);
     flag.set_flag_off(allen::FLAG::Name::setRect);
 }
-void tracker::extract_Shape(allen::Target &_target)
+void tracker::init_SRC(allen::Target &_target)
 {
     if(_target.target_idx != ROBOT_IDX)     return;
 
@@ -284,12 +284,75 @@ void tracker::tracking_Targets(std::vector<allen::Target> &_target)
     //cv::imshow("debug", tmp_debug_mat);
     //cv::waitKey(0);
 }
+std::vector<cv::Point2f> tracker::extract_Contour(allen::Target &_robot, std::vector<bag_t> &_bag_cloud)
+{
+    if((int)_robot.object_pts.size() == 0)  return std::vector<cv::Point2f>();
+
+    cv::Mat tmp_canvas = gui.canvas.clone();
+    //set search region
+    cv::Rect tmp_region = _robot.set_Region(_robot.center_pt);
+    cv::Mat tmp_contour = tmp_canvas(tmp_region);
+    cv::Mat resize_contour;
+
+    if(tmp_contour.cols <= 0 || tmp_contour.rows <= 0)
+        return std::vector<cv::Point2f>();
+
+    cv::resize(tmp_contour, resize_contour, cv::Size(tmp_contour.cols*2.0, tmp_contour.rows*2.0), CV_INTER_LINEAR);
+
+    cv::imshow("dst", resize_contour);
+    //cv::waitKey(0);
+    std::vector<cv::Point2f> output_contour;
+    output_contour.reserve((int)_robot.object_pts.size());
+
+    for(int i = 0; i < (int)_bag_cloud.size(); i++)
+    {
+        bag_t tmp_cloud = _bag_cloud[i];
+        for(int j = 0; j < (int)tmp_cloud.size(); j++)
+        {
+            allen::LaserPointCloud tmp_pt = tmp_cloud[j];
+            cv::Point grid_pt = laser2grid(tmp_pt.laser_coordinate_, grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
+
+            bool valid_pt = false;
+            if(tmp_region.contains(grid_pt))    valid_pt = true;
+            if(valid_pt)
+            {
+                output_contour.push_back(tmp_pt.laser_coordinate_);
+            }
+
+        }
+    }
+
+    return output_contour;
+}
 void tracker::match_Robot(std::vector<allen::Target> &_target)
 {
     if((int)_target.size() != TARGETNUM)    return;
 
-    std::vector<cv::Point2f> src_points = _target[ROBOT_IDX].src_object_pts;
-    //std::vector<cv::Point2f> dst_points = 
+    //std::vector<cv::Point2f> src_points = _target[ROBOT_IDX].src_object_pts;
+    //std::vector<cv::Point2f> dst_points = extract_Contour(_target[ROBOT_IDX], bag_cloud_);
+    std::vector<cv::Point2f> src_points = _target[ROBOT_IDX].src_object_pts;                    //cvtFloat
+    std::vector<cv::Point2f> dst_points = extract_Contour(_target[ROBOT_IDX], bag_cloud_);      //cvtFloat
+
+    bool valid_run = false;
+    if((int)src_points.size() != 0 && (int)dst_points.size() != 0)    valid_run = true;
+    if(valid_run)
+    {
+        printf("src: %d, dst: %d\n", (int)src_points.size(), (int)dst_points.size());
+
+        cv::Mat draw, src_frame, dst_frame, dst_frame_;
+        draw = cv::Mat(500, 500, CV_8UC3, cv::Scalar(255,255,255));
+        src_frame = cv::Mat((int)src_points.size(), 2, CV_32FC1, src_points.data());     //from
+        dst_frame = cv::Mat((int)dst_points.size(), 2, CV_32FC1, dst_points.data());     //to
+
+        output_robot.translate(dst_frame, dst_frame_);
+
+        cv::flann::Index flann_idx(src_frame, cv::flann::KDTreeIndexParams(), cvflann::FLANN_DIST_EUCLIDEAN);
+        allen::Frame tmp_output;
+        bool success = icp.run(dst_frame_, src_frame, tmp_output, flann_idx, draw);
+
+        if(success)
+            output_robot = tmp_output;
+    }
 
 }
 cv::Point2f tracker::rearrange_Centroid(cv::Point _grid_src, cv::Point2f _laser_src, std::vector<bag_t> &_bag_cloud, 
@@ -442,6 +505,7 @@ void tracker::GetMouseEvent(cv::Mat &_canvas)
         target_.clear();
         flag.resetFlag();
         gui.reset(_canvas);
+        output_robot = allen::Frame();
     }
 }
 void tracker::get_syncData(void)

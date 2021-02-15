@@ -7,11 +7,12 @@
 #include <tf/tf.h>
 #include <opencv2/opencv.hpp>
 
-#include "tracker/templete.hpp"
 #include "tracker/parameter.hpp"
+#include "tracker/templete.hpp"
 #include "tracker/sensor.hpp"
 #include "tracker/Flag.hpp"
 #include "tracker/gui.hpp"
+#include "tracker/ICP.hpp"
 
 #define SENSORNUM 4
 #define SRCFRAME 0
@@ -45,6 +46,8 @@ public:
     std::vector<bag_t> bag_cloud_;
     allen::GUI gui;
     std::vector<allen::Target> target_;
+    ICP icp;
+    allen::Frame output_robot;
 
 private:
     void initSubscriber(void);
@@ -110,8 +113,9 @@ public:
     cv::Point2f grid2laser(cv::Point _src_pt, cv::Point _base_pt, float _scale);    //TODO: make to templete for tool library
     void GetMouseEvent(cv::Mat &_canvas);
     void set_Target(std::vector<allen::Target> &_target, cv::Rect _target_rect);
-    void extract_Shape(allen::Target &_target);
+    void init_SRC(allen::Target &_target);
     void tracking_Targets(std::vector<allen::Target> &_target);
+    std::vector<cv::Point2f> extract_Contour(allen::Target &_robot, std::vector<bag_t> &_bag_cloud);
     void runLoop(void);
 
 };
