@@ -86,6 +86,18 @@ namespace allen
             cv::Rect output_rect(start_pt, cv::Size(width_pixel, height_pixel));
             return output_rect;
         }
+        std::vector<cv::Point2f> cvtFloat(std::vector<cv::Point2f> &_src)
+        {
+            std::vector<cv::Point2f> output;
+            for(int i = 0; i < (int)_src.size(); i++)
+            {
+                cv::Point2f tmp_pt;
+                tmp_pt.x = _src[i].x / 1000.0f;
+                tmp_pt.y = _src[i].y / 1000.0f;
+                output.push_back(tmp_pt);
+            }
+            return output;
+        }
     };
 
 

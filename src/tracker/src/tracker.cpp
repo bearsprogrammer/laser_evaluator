@@ -284,6 +284,43 @@ void tracker::tracking_Targets(std::vector<allen::Target> &_target)
     //cv::imshow("debug", tmp_debug_mat);
     //cv::waitKey(0);
 }
+void tracker::display_Pointcloud(cv::Mat &_src1, cv::Mat &_src2, std::string _win_name)
+{
+    if(!flag.get_flag(allen::FLAG::Name::imshow))   return;
+
+    cv::Mat tmp_canvas(grid_tracker.grid_row, grid_tracker.grid_col, CV_8UC3, cv::Scalar(0,0,0));
+
+    for(int i = 0; i < (int)_src1.rows; i++)
+    {
+        cv::Point2f tmp_laser;
+        tmp_laser.x = _src1.at<float>(i, 0);
+        tmp_laser.y = _src1.at<float>(i, 1);
+
+        tmp_laser.x *= 1000.0f;
+        tmp_laser.y *= 1000.0f;
+        //std::cout << "x: " << tmp_laser.x << " y: " << tmp_laser.y << std::endl;
+        cv::Point tmp_grid = laser2grid(tmp_laser, grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
+        //std::cout << "g_x: " << tmp_grid.x << " g_y: " << tmp_grid.y << std::endl;
+
+        cv::circle(tmp_canvas, tmp_grid, 2, cv::Scalar(0,255,0), 1);
+    }
+    for(int i = 0; i < (int)_src2.rows; i++)
+    {
+        cv::Point2f tmp_laser;
+        tmp_laser.x = _src2.at<float>(i, 0);
+        tmp_laser.y = _src2.at<float>(i, 1);
+
+        tmp_laser.x *= 1000.0f;
+        tmp_laser.y *= 1000.0f;
+        //std::cout << "x: " << tmp_laser.x << " y: " << tmp_laser.y << std::endl;
+        cv::Point tmp_grid = laser2grid(tmp_laser, grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
+        //std::cout << "g_x: " << tmp_grid.x << " g_y: " << tmp_grid.y << std::endl;
+
+        cv::circle(tmp_canvas, tmp_grid, 2, cv::Scalar(0,0,255), 1);
+    }
+
+    cv::imshow(_win_name, tmp_canvas);
+}
 std::vector<cv::Point2f> tracker::extract_Contour(allen::Target &_robot, std::vector<bag_t> &_bag_cloud)
 {
     if((int)_robot.object_pts.size() == 0)  return std::vector<cv::Point2f>();
@@ -328,30 +365,36 @@ void tracker::match_Robot(std::vector<allen::Target> &_target)
 {
     if((int)_target.size() != TARGETNUM)    return;
 
-    //std::vector<cv::Point2f> src_points = _target[ROBOT_IDX].src_object_pts;
-    //std::vector<cv::Point2f> dst_points = extract_Contour(_target[ROBOT_IDX], bag_cloud_);
-    std::vector<cv::Point2f> src_points = _target[ROBOT_IDX].src_object_pts;                    //cvtFloat
-    std::vector<cv::Point2f> dst_points = extract_Contour(_target[ROBOT_IDX], bag_cloud_);      //cvtFloat
+    std::vector<cv::Point2f> tmp_src_points = _target[ROBOT_IDX].src_object_pts;
+    std::vector<cv::Point2f> tmp_dst_points = extract_Contour(_target[ROBOT_IDX], bag_cloud_);
+    allen::Target tmp_t;
+    std::vector<cv::Point2f> src_points = tmp_t.cvtFloat(tmp_src_points);       //cvtFloat  -> mm to m
+    std::vector<cv::Point2f> dst_points = tmp_t.cvtFloat(tmp_dst_points);       //cvtFloat  -> mm to m
 
     bool valid_run = false;
     if((int)src_points.size() != 0 && (int)dst_points.size() != 0)    valid_run = true;
     if(valid_run)
     {
-        printf("src: %d, dst: %d\n", (int)src_points.size(), (int)dst_points.size());
+        //printf("src: %d, dst: %d\n", (int)src_points.size(), (int)dst_points.size());
 
-        cv::Mat draw, src_frame, dst_frame, dst_frame_;
-        draw = cv::Mat(500, 500, CV_8UC3, cv::Scalar(255,255,255));
+        cv::Mat draw, src_frame, src_frame_, dst_frame, dst_frame_;
+        draw = cv::Mat(grid.grid_row, grid.grid_col, CV_8UC3, cv::Scalar(255,255,255));
         src_frame = cv::Mat((int)src_points.size(), 2, CV_32FC1, src_points.data());     //from
         dst_frame = cv::Mat((int)dst_points.size(), 2, CV_32FC1, dst_points.data());     //to
 
+        display_Pointcloud(src_frame, dst_frame, "before");
         output_robot.translate(dst_frame, dst_frame_);
+        display_Pointcloud(src_frame, dst_frame_, "after");
 
         cv::flann::Index flann_idx(src_frame, cv::flann::KDTreeIndexParams(), cvflann::FLANN_DIST_EUCLIDEAN);
         allen::Frame tmp_output;
-        bool success = icp.run(dst_frame_, src_frame, tmp_output, flann_idx, draw);
+        bool success = icp.run(dst_frame, src_frame, tmp_output, flann_idx, draw);
 
         if(success)
+        {
             output_robot = tmp_output;
+            printf("output_robot: %lf, %lf, %lf\n", output_robot.x, output_robot.y, output_robot.th);
+        }
     }
 
 }

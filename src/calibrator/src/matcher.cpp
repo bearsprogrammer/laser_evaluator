@@ -26,8 +26,18 @@ void matcher::scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx
     for(int i = 0; i < size; i++)
     {
         float val = msg->ranges[i];
-        if (val <= range_min || val >= range_max || !std::isfinite(val) || val == 0.0f)
-            continue;
+        //if (val <= range_min || val >= range_max || !std::isfinite(val))
+            //continue;
+		//if(idx == 1)
+		//{
+			//if (val <= range_min || val >= range_max || !std::isfinite(val) || val == 0.0f)
+			//{
+				//float angle = angle_min + angle_increment * (float)i;
+				//float degree_ = angle * 180.0f / 3.141592f;
+				//printf("[i: %d][size: %d]-> [angle: %f][range: %f]\n", i, size, degree_, val);
+				//continue;
+			//}
+		//}
         allen::LaserPointCloud temp_lpc;
 
 		//calibrate scale of pointcloud

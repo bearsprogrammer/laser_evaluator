@@ -67,7 +67,7 @@ private:
 public:
     matcher(ros::NodeHandle &_nh) :
         nh_(_nh),
-        imshow(false),
+        imshow(true),
         flag_dataOn(false), flag_matchOn(false), flag_calibOn(false)
     {
         degree2radian = (double)M_PI / 180.0;

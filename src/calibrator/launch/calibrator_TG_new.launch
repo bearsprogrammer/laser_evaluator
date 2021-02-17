@@ -1,0 +1,16 @@
+<launch>
+
+	<param name="robot_description" textfile="$(find calibrator)/urdf/TG_new.urdf" />
+	<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+
+	<!-- 2020-12-24 -->
+	<!-- 3 yd-TG and 1 yd-G4 lidar for evaluation -->
+	<!-- node pkg="calibrator" type="calibrator" name="calibrator" output="screen" -->
+	<!-- /node -->
+
+	<!-- 2021-01-12 -->
+	<!-- tracking for ground_truth -->
+	<!-- node pkg="tracker" type="tracker" name="tracker" output="screen" -->
+	<!-- /node -->
+
+</launch>

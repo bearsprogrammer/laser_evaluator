@@ -67,6 +67,8 @@ namespace allen
                     = this->x + t_x*cos(base_radian_th) - t_y*sin(base_radian_th);
                 _dst.at<float>(i, 1) 
                     = this->y + t_x*sin(base_radian_th) + t_y*cos(base_radian_th);
+                //printf("src-> [x: %f, y: %f], dst-> [x: %f, y: %f]\n", t_x, t_y, 
+                                                                    //_dst.at<float>(i, 0), _dst.at<float>(i, 1));
             }
         }
 
