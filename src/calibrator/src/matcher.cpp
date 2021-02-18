@@ -13,31 +13,24 @@ void matcher::scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx
     allen::Grid_param tmp_grid;
     cv::Mat Grid(grid.grid_row, grid.grid_col, CV_8UC3, cv::Scalar(125, 125, 125));		
 
-    int size = std::min((int)msg->ranges.size(), 1440);
+	int max_resolution = 2500;
+    int size = std::min((int)msg->ranges.size(), max_resolution);
     float angle_min = msg->angle_min;
     float angle_max = msg->angle_max;
     float angle_increment = msg->angle_increment;
     float range_min = (float)msg->range_min;
     float range_max = (float)msg->range_max;
 
-    std::vector<allen::LaserPointCloud> tmp_pointcloud;
-    tmp_pointcloud.reserve(size);
+	std::vector<allen::LaserPointCloud> tmp_pointcloud; 
+	tmp_pointcloud.reserve(size);
 
     for(int i = 0; i < size; i++)
     {
         float val = msg->ranges[i];
-        //if (val <= range_min || val >= range_max || !std::isfinite(val))
-            //continue;
-		//if(idx == 1)
-		//{
-			//if (val <= range_min || val >= range_max || !std::isfinite(val) || val == 0.0f)
-			//{
-				//float angle = angle_min + angle_increment * (float)i;
-				//float degree_ = angle * 180.0f / 3.141592f;
-				//printf("[i: %d][size: %d]-> [angle: %f][range: %f]\n", i, size, degree_, val);
-				//continue;
-			//}
-		//}
+
+		if(val <= range_min || val >= range_max || !std::isfinite(val) || val == 0.0f)
+			continue;
+
         allen::LaserPointCloud temp_lpc;
 
 		//calibrate scale of pointcloud
@@ -675,7 +668,8 @@ void matcher::display_Globalmap(void)
 
             cv::circle(Canvas, tmp_pt_grid, 2, tmp_scalar, -1);
         }
-    } cv::line(Canvas, cv::Point(0, tmp_base_pt.y), cv::Point(grid_global.grid_col, tmp_base_pt.y), cv::Scalar(0,0,255));
+    } 
+	cv::line(Canvas, cv::Point(0, tmp_base_pt.y), cv::Point(grid_global.grid_col, tmp_base_pt.y), cv::Scalar(0,0,255));
     cv::line(Canvas, cv::Point(tmp_base_pt.x, 0), 
                         cv::Point(tmp_base_pt.x, grid_global.grid_row), cv::Scalar(0,0,255));
     Globalmap = Canvas.clone();
