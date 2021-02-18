@@ -14,7 +14,8 @@ void tracker::scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx
     allen::Grid_param tmp_grid;
     cv::Mat Grid(grid.grid_row, grid.grid_col, CV_8UC3, cv::Scalar(125, 125, 125));		
 
-    int size = std::min((int)msg->ranges.size(), 1440);
+	int max_resolution = 2500;
+    int size = std::min((int)msg->ranges.size(), max_resolution);
     float angle_min = msg->angle_min;
     float angle_max = msg->angle_max;
     float angle_increment = msg->angle_increment;

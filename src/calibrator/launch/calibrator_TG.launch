@@ -5,8 +5,8 @@
 
 	<!-- 2020-12-24 -->
 	<!-- 3 yd-TG and 1 yd-G4 lidar for evaluation -->
-	<!-- node pkg="calibrator" type="calibrator" name="calibrator" output="screen" -->
-	<!-- /node -->
+	<node pkg="calibrator" type="calibrator" name="calibrator" output="screen">
+	</node>
 
 	<!-- 2021-01-12 -->
 	<!-- tracking for ground_truth -->

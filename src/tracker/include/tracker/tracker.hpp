@@ -20,7 +20,7 @@
 #define SCALEFACTOR_2 1.0f
 #define SCALEFACTOR_3 1.0f
 #define SCALEFACTOR_4 1.0f
-#define TARGETNUM 4
+#define TARGETNUM 2
 #define TRACKING_RADIUS 300.0f
 #define GUI_MARGIN 100
 #define GRID_MARGIN 300.0f
