@@ -31,6 +31,17 @@ namespace allen
     public:
         double x, y, th;
 
+    private:
+        void rearrange_Angle(void)
+        {
+            while(1)
+            {
+                if(this->th < -180.0)       this->th += 360.0;
+                else if(this->th > 180.0)   this->th -= 360.0;
+                else break;
+            }
+        }
+
     public:
         Frame(void) :
             x(0.0), y(0.0), th(0.0)
@@ -70,6 +81,19 @@ namespace allen
                 //printf("src-> [x: %f, y: %f], dst-> [x: %f, y: %f]\n", t_x, t_y, 
                                                                     //_dst.at<float>(i, 0), _dst.at<float>(i, 1));
             }
+        }
+        Frame add_Frame(Frame &_src)
+        {
+            double d2r = 3.141592 / 180.0;
+            double base_radian_th = this->th*d2r;
+
+            Frame output;
+            output.x = this->x + _src.x*cos(base_radian_th) - _src.y*sin(base_radian_th);
+            output.y = this->y + _src.x*sin(base_radian_th) + _src.y*cos(base_radian_th);
+            output.th = this->th + _src.th;
+            output.rearrange_Angle();
+
+            return output;
         }
 
     };

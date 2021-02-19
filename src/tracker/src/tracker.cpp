@@ -389,11 +389,12 @@ void tracker::match_Robot(std::vector<allen::Target> &_target)
 
         cv::flann::Index flann_idx(src_frame, cv::flann::KDTreeIndexParams(), cvflann::FLANN_DIST_EUCLIDEAN);
         allen::Frame tmp_output;
-        bool success = icp.run(dst_frame, src_frame, tmp_output, flann_idx, draw);
+        bool success = icp.run(dst_frame_, src_frame, tmp_output, flann_idx, draw);
 
         if(success)
         {
-            output_robot = tmp_output;
+            output_robot = output_robot.add_Frame(tmp_output);
+
             printf("output_robot: %lf, %lf, %lf\n", output_robot.x, output_robot.y, output_robot.th);
         }
     }
