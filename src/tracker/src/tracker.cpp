@@ -234,6 +234,7 @@ void tracker::init_SRC(allen::Target &_target)
     else
     {
         _target.src_dp_mat = tmp_canvas(tmp_rect);
+        get_ZeroMeaned(_target.src_object_pts);
         ROS_INFO("Number of Point-cloud for Robot contour is set: %d", (int)_target.src_object_pts.size());
     }
 
@@ -244,6 +245,17 @@ void tracker::init_SRC(allen::Target &_target)
         cv::resize(_target.src_dp_mat, resize_contour, tmp_size, CV_INTER_LINEAR);
         cv::imshow("contour", resize_contour);
     }
+}
+void tracker::get_ZeroMeaned(std::vector<cv::Point2f> &_pointcloud)
+{
+    std::vector<cv::Point2f> tmp_mean_vec;
+
+    for(int i = 0; i < (int)_pointcloud.size(); i++)
+    {
+        
+    }
+
+
 }
 void tracker::tracking_Targets(std::vector<allen::Target> &_target)
 {
@@ -321,6 +333,7 @@ void tracker::display_Pointcloud(cv::Mat &_src1, cv::Mat &_src2, std::string _wi
     }
 
     cv::imshow(_win_name, tmp_canvas);
+    //cv::waitKey(0);
 }
 std::vector<cv::Point2f> tracker::extract_Contour(allen::Target &_robot, std::vector<bag_t> &_bag_cloud)
 {
@@ -393,7 +406,12 @@ void tracker::match_Robot(std::vector<allen::Target> &_target)
 
         if(success)
         {
-            output_robot = output_robot.add_Frame(tmp_output);
+            //output_robot = output_robot.add_Frame(tmp_output);
+            output_robot.x += tmp_output.x;
+            output_robot.y += tmp_output.y;
+            output_robot.th += tmp_output.th;
+            output_robot.rearrange_Angle();
+            //output_robot = tmp_output;
 
             printf("output_robot: %lf, %lf, %lf\n", output_robot.x, output_robot.y, output_robot.th);
         }

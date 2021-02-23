@@ -327,8 +327,9 @@ bool ICP::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index
 					iter, output.x, output.y, output.th), 
 				cv::Point(15, 25), 0, 0.5, cv::Scalar(0, 0, 0)
 			);
-			bool success = cv::imwrite(cv::format("/home/allenkim/log/%lf.jpg", 
-				ros::Time::now().toSec()), matching_draw);
+            cv::imshow("icp", matching_draw);
+			//bool success = cv::imwrite(cv::format("/home/allenkim/log/%lf.jpg", 
+				//ros::Time::now().toSec()), matching_draw);
 		}
 
 		if(from_inlier.rows <= 10 || to_inlier.rows <= 10)

@@ -31,7 +31,7 @@ namespace allen
     public:
         double x, y, th;
 
-    private:
+    public:
         void rearrange_Angle(void)
         {
             while(1)
@@ -41,8 +41,6 @@ namespace allen
                 else break;
             }
         }
-
-    public:
         Frame(void) :
             x(0.0), y(0.0), th(0.0)
         {}
