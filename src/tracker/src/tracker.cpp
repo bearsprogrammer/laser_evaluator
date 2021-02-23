@@ -112,6 +112,9 @@ void tracker::display_Globalmap(void)
     grid_global.base_pt.push_back(cv::Point2f((float)grid_global.grid_col-margin_grid, (float)grid_global.grid_row-margin_grid));
 
     cv::Point2f tmp_base_pt = grid_global.base_pt[SRCFRAME];
+    //cv::Point2f tmp_base_pt; 
+    //tmp_base_pt.x = grid_global.grid_col / 2.0f;
+    //tmp_base_pt.y = grid_global.grid_row / 2.0f;
 
 	cv::Point tmp_mark_pt(50, 50);
 
@@ -212,6 +215,7 @@ void tracker::init_SRC(allen::Target &_target)
     cv::Rect tmp_rect = _target.target_rect;
     cv::Mat debug_mat(300, 300, CV_8UC3, cv::Scalar(0,0,0));
     cv::Mat tmp_canvas = gui.canvas.clone();
+    cv::Point2f sum_pt, mean_pt;
 
     for(int i = 0; i < (int)bag_cloud_.size(); i++)
     {
@@ -226,6 +230,8 @@ void tracker::init_SRC(allen::Target &_target)
             if(valid_pt)
             {
                 _target.src_object_pts.push_back(tmp_cloud.laser_coordinate_);
+                sum_pt.x += tmp_cloud.laser_coordinate_.x;
+                sum_pt.y += tmp_cloud.laser_coordinate_.y;
             }
         }
     }
@@ -234,7 +240,13 @@ void tracker::init_SRC(allen::Target &_target)
     else
     {
         _target.src_dp_mat = tmp_canvas(tmp_rect);
-        get_ZeroMeaned(_target.src_object_pts);
+        mean_pt.x = sum_pt.x / (float)_target.src_object_pts.size();
+        mean_pt.y = sum_pt.y / (float)_target.src_object_pts.size();
+
+        get_ZeroMeaned(_target.src_object_pts, mean_pt);
+        output_robot.x -= (mean_pt.x / 1000.0);
+        output_robot.y -= (mean_pt.y / 1000.0);
+
         ROS_INFO("Number of Point-cloud for Robot contour is set: %d", (int)_target.src_object_pts.size());
     }
 
@@ -246,16 +258,19 @@ void tracker::init_SRC(allen::Target &_target)
         cv::imshow("contour", resize_contour);
     }
 }
-void tracker::get_ZeroMeaned(std::vector<cv::Point2f> &_pointcloud)
+void tracker::get_ZeroMeaned(std::vector<cv::Point2f> &_pointcloud, cv::Point2f _mean_pt)
 {
     std::vector<cv::Point2f> tmp_mean_vec;
 
     for(int i = 0; i < (int)_pointcloud.size(); i++)
     {
-        
+        cv::Point2f tmp_pt = _pointcloud[i];
+        tmp_pt.x -= _mean_pt.x;
+        tmp_pt.y -= _mean_pt.y;
+        tmp_mean_vec.push_back(tmp_pt);
     }
 
-
+    _pointcloud.swap(tmp_mean_vec);
 }
 void tracker::tracking_Targets(std::vector<allen::Target> &_target)
 {
@@ -331,6 +346,30 @@ void tracker::display_Pointcloud(cv::Mat &_src1, cv::Mat &_src2, std::string _wi
 
         cv::circle(tmp_canvas, tmp_grid, 2, cv::Scalar(0,0,255), 1);
     }
+
+    //Center
+    cv::Point origin_pt = laser2grid(cv::Point2f(0.0f, 0.0f), grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
+    cv::Point test_pt = laser2grid(cv::Point2f(1000.0f, 0.0f), grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
+    cv::Point test1_pt = laser2grid(cv::Point2f(0.0f, 1000.0f), grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
+
+    float test_th = output_robot.th / 180.0f * CV_PI * -1.0f;
+    float test_x = output_robot.x*cos(test_th) - output_robot.y*sin(test_th);
+    float test_y = output_robot.x*sin(test_th) + output_robot.y*cos(test_th);
+    test_x *= -1.0f;
+    test_y *= -1.0f;
+
+    cv::Point output_pt = 
+            laser2grid(cv::Point2f(test_x*1000.0f, test_y*1000.0f), 
+                        grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
+
+    cv::line(tmp_canvas, cv::Point(0, origin_pt.y), 
+                        cv::Point(grid_tracker.grid_col, origin_pt.y), cv::Scalar(0,0,255));
+    cv::line(tmp_canvas, cv::Point(origin_pt.x, 0), 
+                        cv::Point(origin_pt.x, grid_tracker.grid_row), cv::Scalar(0,0,255));
+    cv::circle(tmp_canvas, test_pt, 2, cv::Scalar(255,255,0), 5);
+    cv::circle(tmp_canvas, test1_pt, 2, cv::Scalar(0,255,255), 5);
+    cv::circle(tmp_canvas, output_pt, 2, cv::Scalar(255,255,255), 5);
+
 
     cv::imshow(_win_name, tmp_canvas);
     //cv::waitKey(0);

@@ -43,10 +43,12 @@ namespace allen
         }
         Frame(void) :
             x(0.0), y(0.0), th(0.0)
-        {}
+        {
+        }
         Frame(double _x, double _y, double _th) :
             x(_x), y(_y), th(_th)
-        {}
+        {
+        }
         void translate(cv::Mat &_src, cv::Mat &_dst)
         {
             if(_src.type() != 5)
