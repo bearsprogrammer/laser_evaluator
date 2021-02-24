@@ -244,8 +244,8 @@ void tracker::init_SRC(allen::Target &_target)
         mean_pt.y = sum_pt.y / (float)_target.src_object_pts.size();
 
         get_ZeroMeaned(_target.src_object_pts, mean_pt);
-        output_robot.x -= (mean_pt.x / 1000.0);
-        output_robot.y -= (mean_pt.y / 1000.0);
+        output_matching.x -= (mean_pt.x / 1000.0);
+        output_matching.y -= (mean_pt.y / 1000.0);
 
         ROS_INFO("Number of Point-cloud for Robot contour is set: %d", (int)_target.src_object_pts.size());
     }
@@ -351,15 +351,7 @@ void tracker::display_Pointcloud(cv::Mat &_src1, cv::Mat &_src2, std::string _wi
     cv::Point origin_pt = laser2grid(cv::Point2f(0.0f, 0.0f), grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
     cv::Point test_pt = laser2grid(cv::Point2f(1000.0f, 0.0f), grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
     cv::Point test1_pt = laser2grid(cv::Point2f(0.0f, 1000.0f), grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
-
-    float test_th = output_robot.th / 180.0f * CV_PI * -1.0f;
-    float test_x = output_robot.x*cos(test_th) - output_robot.y*sin(test_th);
-    float test_y = output_robot.x*sin(test_th) + output_robot.y*cos(test_th);
-    test_x *= -1.0f;
-    test_y *= -1.0f;
-
-    cv::Point output_pt = 
-            laser2grid(cv::Point2f(test_x*1000.0f, test_y*1000.0f), 
+    cv::Point output_pt = laser2grid(cv::Point2f(output_robot.x*1000.0f, output_robot.y*1000.0f), 
                         grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
 
     cv::line(tmp_canvas, cv::Point(0, origin_pt.y), 
@@ -436,7 +428,7 @@ void tracker::match_Robot(std::vector<allen::Target> &_target)
         dst_frame = cv::Mat((int)dst_points.size(), 2, CV_32FC1, dst_points.data());     //to
 
         display_Pointcloud(src_frame, dst_frame, "before");
-        output_robot.translate(dst_frame, dst_frame_);
+        output_matching.translate(dst_frame, dst_frame_);
         display_Pointcloud(src_frame, dst_frame_, "after");
 
         cv::flann::Index flann_idx(src_frame, cv::flann::KDTreeIndexParams(), cvflann::FLANN_DIST_EUCLIDEAN);
@@ -445,17 +437,28 @@ void tracker::match_Robot(std::vector<allen::Target> &_target)
 
         if(success)
         {
-            //output_robot = output_robot.add_Frame(tmp_output);
-            output_robot.x += tmp_output.x;
-            output_robot.y += tmp_output.y;
-            output_robot.th += tmp_output.th;
-            output_robot.rearrange_Angle();
-            //output_robot = tmp_output;
+            output_matching.x += tmp_output.x;
+            output_matching.y += tmp_output.y;
+            output_matching.th += tmp_output.th;
+            output_matching.rearrange_Angle();
 
-            printf("output_robot: %lf, %lf, %lf\n", output_robot.x, output_robot.y, output_robot.th);
+            output_robot = get_RobotPose(output_matching);
+            printf("output_matching: %lf, %lf, %lf\n", output_matching.x, output_matching.y, output_matching.th);
+            printf("output_robot: %lf, %lf, %lf\n\n", output_robot.x, output_robot.y, output_robot.th*radian2degree);
         }
     }
 
+}
+allen::Frame tracker::get_RobotPose(allen::Frame _icp_pose)
+{
+    allen::Frame tmp_frame;
+    tmp_frame.th = _icp_pose.th * degree2radian * -1.0;    //radian
+    tmp_frame.x = _icp_pose.x * cos(tmp_frame.th) - _icp_pose.y * sin(tmp_frame.th);
+    tmp_frame.y = _icp_pose.x * sin(tmp_frame.th) + _icp_pose.y * cos(tmp_frame.th);
+    tmp_frame.x *= -1.0;   //m
+    tmp_frame.y *= -1.0;   //m
+
+    return tmp_frame;
 }
 cv::Point2f tracker::rearrange_Centroid(cv::Point _grid_src, cv::Point2f _laser_src, std::vector<bag_t> &_bag_cloud, 
                                     cv::Mat &_debug_mat, std::vector<cv::Point2f> &_tmp_object_pts)
@@ -607,6 +610,7 @@ void tracker::GetMouseEvent(cv::Mat &_canvas)
         target_.clear();
         flag.resetFlag();
         gui.reset(_canvas);
+        output_matching = allen::Frame();
         output_robot = allen::Frame();
     }
 }
