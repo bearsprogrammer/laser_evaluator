@@ -159,22 +159,29 @@ void tracker::display_Globalmap(void)
 			cv::Point(tmp_mark_pt.x + 100, tmp_mark_pt.y+5), cv::FONT_HERSHEY_COMPLEX, 0.7f, tmp_scalar, 1, CV_AA);
 		tmp_mark_pt.y += 25;
     }
-    //SRC_FRAME
-    //cv::line(Canvas, cv::Point(0, tmp_base_pt.y), 
-                        //cv::Point(grid_global.grid_col, tmp_base_pt.y), cv::Scalar(0,0,255));
-    //cv::line(Canvas, cv::Point(tmp_base_pt.x, 0), 
-                        //cv::Point(tmp_base_pt.x, grid_global.grid_row), cv::Scalar(0,0,255));
-    //Center
-    //cv::line(Canvas, cv::Point(0, grid_global.robot_row), 
-                        //cv::Point(grid_global.grid_col, grid_global.robot_row), cv::Scalar(0,0,255));
-    //cv::line(Canvas, cv::Point(grid_global.robot_col, 0), 
-                        //cv::Point(grid_global.robot_col, grid_global.grid_row), cv::Scalar(0,0,255));
+
     for(int i = 0; i < (int)target_.size(); i++)
     {
         if(std::isinf(target_[i].centroid_pt.x) || std::isinf(target_[i].centroid_pt.y))    continue;
+        //Plot each of target
         cv::Point tmp_center_pt = laser2grid(target_[i].centroid_pt, grid_global.base_pt[SRCFRAME], grid_global.mm2pixel);
-        cv::circle(Canvas, tmp_center_pt, target_[i].target_radius * grid_tracker.mm2pixel, cv::Scalar(0,0,255), 2);
+        if(i == ROBOT_IDX)
+        {
+            if(flag.get_flag(allen::FLAG::Name::robotOn))
+            {
+                //display robot contour from icp result
+            }
+        }
+        else
+            cv::circle(Canvas, tmp_center_pt, target_[i].target_radius * grid_tracker.mm2pixel, cv::Scalar(0,0,255), 2);
     }
+
+    //origin axis
+    cv::Point origin_pt = laser2grid(cv::Point2f(0.0f, 0.0f), grid_global.base_pt[SRCFRAME], grid_global.mm2pixel);
+    cv::line(Canvas, cv::Point(0, origin_pt.y), 
+                        cv::Point(grid_global.grid_col, origin_pt.y), cv::Scalar(0,255,0));
+    cv::line(Canvas, cv::Point(origin_pt.x, 0), 
+                        cv::Point(origin_pt.x, grid_global.grid_row), cv::Scalar(0,255,0));
 
     Globalmap = Canvas.clone();
     if(gui.initialize)  
@@ -353,7 +360,7 @@ void tracker::display_Pointcloud(cv::Mat &_src1, cv::Mat &_src2, std::string _wi
     cv::Point test1_pt = laser2grid(cv::Point2f(0.0f, 1000.0f), grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
     cv::Point output_pt = laser2grid(cv::Point2f(output_robot.x*1000.0f, output_robot.y*1000.0f), 
                         grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
-
+    //origin axis
     cv::line(tmp_canvas, cv::Point(0, origin_pt.y), 
                         cv::Point(grid_tracker.grid_col, origin_pt.y), cv::Scalar(0,0,255));
     cv::line(tmp_canvas, cv::Point(origin_pt.x, 0), 
@@ -428,7 +435,7 @@ void tracker::match_Robot(std::vector<allen::Target> &_target)
         dst_frame = cv::Mat((int)dst_points.size(), 2, CV_32FC1, dst_points.data());     //to
 
         display_Pointcloud(src_frame, dst_frame, "before");
-        output_matching.translate(dst_frame, dst_frame_);
+        output_matching.translate(dst_frame, dst_frame_);       
         display_Pointcloud(src_frame, dst_frame_, "after");
 
         cv::flann::Index flann_idx(src_frame, cv::flann::KDTreeIndexParams(), cvflann::FLANN_DIST_EUCLIDEAN);
@@ -437,13 +444,17 @@ void tracker::match_Robot(std::vector<allen::Target> &_target)
 
         if(success)
         {
+            //Initial-guess
             output_matching.x += tmp_output.x;
             output_matching.y += tmp_output.y;
             output_matching.th += tmp_output.th;
             output_matching.rearrange_Angle();
 
             output_robot = get_RobotPose(output_matching);
-            printf("output_matching: %lf, %lf, %lf\n", output_matching.x, output_matching.y, output_matching.th);
+
+            if(!flag.get_flag(allen::FLAG::Name::robotOn))  flag.set_flag_on(allen::FLAG::Name::robotOn);
+
+            //printf("output_matching: %lf, %lf, %lf\n", output_matching.x, output_matching.y, output_matching.th);
             printf("output_robot: %lf, %lf, %lf\n\n", output_robot.x, output_robot.y, output_robot.th*radian2degree);
         }
     }

@@ -39,6 +39,7 @@ namespace allen
                 if(this->th < -180.0)       this->th += 360.0;
                 else if(this->th > 180.0)   this->th -= 360.0;
                 else break;
+                //std::cout << "hi" << std::endl;
             }
         }
         Frame(void) :
