@@ -21,6 +21,9 @@ private:
             cv::Mat& from_inlier, cv::Mat& to_inlier, double ratio, cv::Mat& draw);
 
 public:
+    cv::Mat from_inlier_;
+
+public:
     ICP(/* args */)
     {
         degree2radian = (double)M_PI / 180.0;
@@ -28,6 +31,10 @@ public:
     ~ICP()
     {}
     bool run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index &flann_idx, cv::Mat &draw);
+    void reset()
+    {
+        this->from_inlier_ = cv::Mat();
+    }
 
 };
 

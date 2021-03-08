@@ -105,6 +105,7 @@ public:
     cv::Point2f rearrange_Centroid(cv::Point _grid_src, cv::Point2f _laser_src, std::vector<bag_t> &_bag_cloud, 
                                         cv::Mat &_debug_mat, std::vector<cv::Point2f> &_tmp_object_pts);
     allen::Frame get_RobotPose(allen::Frame _icp_pose);
+    std::vector<cv::Point2f> get_dstContour(allen::Frame _robot_pose, cv::Mat &_dst_inlier);
     cv::Point2f calc_Mean(bag_t _src);                                              //TODO: make to templete for tool library
     float get_dist2f(cv::Point2f _pt1, cv::Point2f _pt2)                            //TODO: make to templete for tool library
     {

@@ -320,6 +320,8 @@ bool ICP::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index
 		cv::Mat from_inlier, to_inlier;
 		match(flann_idx, points, to, from_inlier, to_inlier, ratio, matching_draw);
 
+        //printf("[i:%d]from_inlier cnt: %d\n", iter, from_inlier.rows);
+
 		if(!matching_draw.empty())
 		{
 			cv::putText(matching_draw, 
@@ -365,6 +367,7 @@ bool ICP::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index
 		if(fabs(dx)<0.005f && fabs(dy)<0.005f && fabs(dth) < 0.0005f)
 		{
 			transform(from, points, output);
+            from_inlier_ = from_inlier.clone();
 			break;
 		}
 	}
@@ -372,7 +375,6 @@ bool ICP::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index
 	if(1)
 	{
 		points.copyTo(from);
-
 	}
 
 	if(draw_result)

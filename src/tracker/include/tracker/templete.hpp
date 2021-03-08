@@ -88,6 +88,8 @@ namespace allen
         }
         std::vector<cv::Point2f> cvtFloat(std::vector<cv::Point2f> &_src)
         {
+            if((int)_src.size() == 0)    return std::vector<cv::Point2f>();
+
             std::vector<cv::Point2f> output;
             for(int i = 0; i < (int)_src.size(); i++)
             {

@@ -418,7 +418,12 @@ void tracker::match_Robot(std::vector<allen::Target> &_target)
     if((int)_target.size() != TARGETNUM)    return;
 
     std::vector<cv::Point2f> tmp_src_points = _target[ROBOT_IDX].src_object_pts;
-    std::vector<cv::Point2f> tmp_dst_points = extract_Contour(_target[ROBOT_IDX], bag_cloud_);
+    std::vector<cv::Point2f> tmp_dst_points; 
+    if(flag.get_flag(allen::FLAG::Name::robotOn))
+        tmp_dst_points = get_dstContour(output_robot, icp.from_inlier_);
+    else
+        tmp_dst_points = extract_Contour(_target[ROBOT_IDX], bag_cloud_);
+
     allen::Target tmp_t;
     std::vector<cv::Point2f> src_points = tmp_t.cvtFloat(tmp_src_points);       //cvtFloat  -> mm to m
     std::vector<cv::Point2f> dst_points = tmp_t.cvtFloat(tmp_dst_points);       //cvtFloat  -> mm to m
@@ -436,7 +441,7 @@ void tracker::match_Robot(std::vector<allen::Target> &_target)
 
         display_Pointcloud(src_frame, dst_frame, "before");
         output_matching.translate(dst_frame, dst_frame_);       
-        display_Pointcloud(src_frame, dst_frame_, "after");
+        //display_Pointcloud(src_frame, dst_frame_, "after");
 
         cv::flann::Index flann_idx(src_frame, cv::flann::KDTreeIndexParams(), cvflann::FLANN_DIST_EUCLIDEAN);
         allen::Frame tmp_output;
@@ -458,6 +463,12 @@ void tracker::match_Robot(std::vector<allen::Target> &_target)
             printf("output_robot: %lf, %lf, %lf\n\n", output_robot.x, output_robot.y, output_robot.th*radian2degree);
         }
     }
+    else
+    {
+        ROS_ERROR("Not enough size of dst point-cloud");
+        return;
+    }
+    
 
 }
 allen::Frame tracker::get_RobotPose(allen::Frame _icp_pose)
@@ -470,6 +481,27 @@ allen::Frame tracker::get_RobotPose(allen::Frame _icp_pose)
     tmp_frame.y *= -1.0;   //m
 
     return tmp_frame;
+}
+std::vector<cv::Point2f> tracker::get_dstContour(allen::Frame _robot_pose, cv::Mat &_dst_inlier)
+{
+    if(_dst_inlier.rows < 10)
+    {
+        return std::vector<cv::Point2f>();
+    }
+    cv::Mat tmp_canvas = gui.canvas.clone();
+
+    for(int i = 0; i < _dst_inlier.rows; i++)
+    {
+        cv::Point2f point;
+        point.x = _dst_inlier.at<float>(i, 0);
+        point.y = _dst_inlier.at<float>(i, 1);
+        printf("dst_inlier-> [cnt: %d][x: %f, y: %f]\n", i, point.x, point.y);
+        //debug
+        cv::Point img_point;
+        img_point = laser2grid(point, grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
+    }
+    std::cout << std::endl;
+
 }
 cv::Point2f tracker::rearrange_Centroid(cv::Point _grid_src, cv::Point2f _laser_src, std::vector<bag_t> &_bag_cloud, 
                                     cv::Mat &_debug_mat, std::vector<cv::Point2f> &_tmp_object_pts)
@@ -623,6 +655,7 @@ void tracker::GetMouseEvent(cv::Mat &_canvas)
         gui.reset(_canvas);
         output_matching = allen::Frame();
         output_robot = allen::Frame();
+        icp.reset();
     }
 }
 void tracker::get_syncData(void)
