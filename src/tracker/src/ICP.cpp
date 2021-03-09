@@ -330,12 +330,14 @@ bool ICP::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index
 				cv::Point(15, 25), 0, 0.5, cv::Scalar(0, 0, 0)
 			);
             cv::imshow("icp", matching_draw);
+            //cv::waitKey(0);
 			//bool success = cv::imwrite(cv::format("/home/allenkim/log/%lf.jpg", 
 				//ros::Time::now().toSec()), matching_draw);
 		}
 
 		if(from_inlier.rows <= 10 || to_inlier.rows <= 10)
 		{
+            std::cout << "fail" << std::endl;
 			break;
 		}
 
@@ -368,6 +370,7 @@ bool ICP::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index
 		{
 			transform(from, points, output);
             from_inlier_ = from_inlier.clone();
+            std::cout<<"success"<<std::endl;
 			break;
 		}
 	}

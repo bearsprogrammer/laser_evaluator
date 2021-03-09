@@ -100,16 +100,7 @@ void tracker::display_Globalmap(void)
     if(!flag.get_flag(allen::FLAG::Name::imshow))   return;
     if((int)bag_cloud_[SRCFRAME].size() == 0)       return;
 
-    allen::Grid_param grid_global;
     cv::Mat Canvas(grid_global.grid_row, grid_global.grid_col, CV_8UC3, cv::Scalar(0,0,0));
-
-    //float margin_grid = 300.0f;
-    float margin_grid = GRID_MARGIN; 
-
-    grid_global.base_pt.push_back(cv::Point2f(margin_grid, (float)grid_global.grid_row-margin_grid));
-    grid_global.base_pt.push_back(cv::Point2f((float)grid_global.grid_col-margin_grid, margin_grid));
-    grid_global.base_pt.push_back(cv::Point2f(margin_grid, margin_grid));
-    grid_global.base_pt.push_back(cv::Point2f((float)grid_global.grid_col-margin_grid, (float)grid_global.grid_row-margin_grid));
 
     cv::Point2f tmp_base_pt = grid_global.base_pt[SRCFRAME];
     //cv::Point2f tmp_base_pt; 
@@ -419,10 +410,15 @@ void tracker::match_Robot(std::vector<allen::Target> &_target)
 
     std::vector<cv::Point2f> tmp_src_points = _target[ROBOT_IDX].src_object_pts;
     std::vector<cv::Point2f> tmp_dst_points; 
-    if(flag.get_flag(allen::FLAG::Name::robotOn))
-        tmp_dst_points = get_dstContour(output_robot, icp.from_inlier_);
-    else
-        tmp_dst_points = extract_Contour(_target[ROBOT_IDX], bag_cloud_);
+
+    ////////////////////////////////////////////////////////////////
+    //if(flag.get_flag(allen::FLAG::Name::robotOn))
+        //tmp_dst_points = get_dstContour(output_robot, icp.from_inlier_);
+    //else
+        //tmp_dst_points = extract_Contour(_target[ROBOT_IDX], bag_cloud_);
+    tmp_dst_points = extract_Contour(_target[ROBOT_IDX], bag_cloud_);
+    std::vector<cv::Point2f> test_vec = get_dstContour(output_robot, icp.from_inlier_);
+    ////////////////////////////////////////////////////////////////
 
     allen::Target tmp_t;
     std::vector<cv::Point2f> src_points = tmp_t.cvtFloat(tmp_src_points);       //cvtFloat  -> mm to m
@@ -439,9 +435,9 @@ void tracker::match_Robot(std::vector<allen::Target> &_target)
         src_frame = cv::Mat((int)src_points.size(), 2, CV_32FC1, src_points.data());     //from
         dst_frame = cv::Mat((int)dst_points.size(), 2, CV_32FC1, dst_points.data());     //to
 
-        display_Pointcloud(src_frame, dst_frame, "before");
+        //display_Pointcloud(src_frame, dst_frame, "before");
         output_matching.translate(dst_frame, dst_frame_);       
-        //display_Pointcloud(src_frame, dst_frame_, "after");
+        display_Pointcloud(src_frame, dst_frame_, "after");
 
         cv::flann::Index flann_idx(src_frame, cv::flann::KDTreeIndexParams(), cvflann::FLANN_DIST_EUCLIDEAN);
         allen::Frame tmp_output;
@@ -488,20 +484,28 @@ std::vector<cv::Point2f> tracker::get_dstContour(allen::Frame _robot_pose, cv::M
     {
         return std::vector<cv::Point2f>();
     }
-    cv::Mat tmp_canvas = gui.canvas.clone();
+
+    cv::Mat tmp_canvas(gui.canvas.rows, gui.canvas.cols, CV_8UC3, cv::Scalar(0,0,0));
+    std::vector<cv::Point2f> output_vec;
 
     for(int i = 0; i < _dst_inlier.rows; i++)
     {
         cv::Point2f point;
-        point.x = _dst_inlier.at<float>(i, 0);
-        point.y = _dst_inlier.at<float>(i, 1);
-        printf("dst_inlier-> [cnt: %d][x: %f, y: %f]\n", i, point.x, point.y);
+        point.x = _dst_inlier.at<float>(i, 0) * 1000.0f;
+        point.y = _dst_inlier.at<float>(i, 1) * 1000.0f;
+        //printf("dst_inlier-> [cnt: %d][x: %f, y: %f]\n", i, point.x, point.y);
+        output_vec.push_back(point);
+
         //debug
         cv::Point img_point;
         img_point = laser2grid(point, grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
+        //printf("dst_inlier-> [cnt: %d][gx: %d, gy: %d]\n\n", i, img_point.x, img_point.y);
+        cv::circle(tmp_canvas, img_point, 2, cv::Scalar(255, 255, 255), -1);
     }
-    std::cout << std::endl;
-
+    cv::imshow("inlier", tmp_canvas);
+    //cv::waitKey(0);
+    //std::cout << std::endl;
+    return output_vec;
 }
 cv::Point2f tracker::rearrange_Centroid(cv::Point _grid_src, cv::Point2f _laser_src, std::vector<bag_t> &_bag_cloud, 
                                     cv::Mat &_debug_mat, std::vector<cv::Point2f> &_tmp_object_pts)

@@ -41,7 +41,7 @@ private:
 public:
     std::vector<sensor*> sensors;
     std::vector<float> scale_factor;
-    allen::Grid_param grid, grid_tracker;
+    allen::Grid_param grid, grid_tracker, grid_global;
     cv::Mat Globalmap;
     std::vector<bag_t> bag_cloud_;
     allen::GUI gui;
@@ -88,6 +88,11 @@ public:
         grid_tracker.base_pt.push_back(cv::Point2f(margin_grid_tracker, margin_grid_tracker));
         grid_tracker.base_pt.push_back(cv::Point2f((float)gui.canvas_s.width - margin_grid_tracker, 
                                                     (float)gui.canvas_s.height - margin_grid_tracker));
+
+        grid_global.base_pt.push_back(cv::Point2f(GRID_MARGIN, (float)grid_global.grid_row-GRID_MARGIN));
+        grid_global.base_pt.push_back(cv::Point2f((float)grid_global.grid_col-GRID_MARGIN, GRID_MARGIN));
+        grid_global.base_pt.push_back(cv::Point2f(GRID_MARGIN, GRID_MARGIN));
+        grid_global.base_pt.push_back(cv::Point2f((float)grid_global.grid_col-GRID_MARGIN, (float)grid_global.grid_row-GRID_MARGIN));
 
         initSubscriber();
     }
