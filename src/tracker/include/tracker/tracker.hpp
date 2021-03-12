@@ -20,11 +20,12 @@
 #define SCALEFACTOR_2 1.0f
 #define SCALEFACTOR_3 1.0f
 #define SCALEFACTOR_4 1.0f
-#define TARGETNUM 2
 #define TRACKING_RADIUS 300.0f
 #define GUI_MARGIN 100
 #define GRID_MARGIN 300.0f
+#define TARGETNUM 3
 #define ROBOT_IDX 0
+#define TARGET_IDX 1
 
 using bag_t = std::vector<allen::LaserPointCloud>;
 
@@ -124,7 +125,7 @@ public:
     void get_ZeroMeaned(std::vector<cv::Point2f> &_pointcloud, cv::Point2f _mean_pt);
     void tracking_Targets(std::vector<allen::Target> &_target);
     void display_Pointcloud(cv::Mat &_src1, cv::Mat &_src2, std::string _win_name);
-    std::vector<cv::Point2f> extract_Contour(allen::Target &_robot, std::vector<bag_t> &_bag_cloud);
+    std::vector<cv::Point2f> extract_Contour(allen::Target &_robot, std::vector<bag_t> &_bag_cloud, bool _flag);
     void runLoop(void);
 
 };
