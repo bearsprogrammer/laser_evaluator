@@ -25,7 +25,7 @@ namespace allen
         int target_idx;
         cv::Rect target_rect;
         cv::Point center_pt;
-        cv::Point2f centroid_pt;
+        cv::Point2f centroid_pt;    //mm
         float target_radius;
         std::vector<cv::Point2f> object_pts, src_object_pts;
         cv::Mat src_dp_mat;

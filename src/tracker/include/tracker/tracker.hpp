@@ -23,7 +23,7 @@
 #define TRACKING_RADIUS 300.0f
 #define GUI_MARGIN 100
 #define GRID_MARGIN 300.0f
-#define TARGETNUM 3
+#define TARGETNUM 2 
 #define ROBOT_IDX 0
 #define TARGET_IDX 1
 
@@ -48,7 +48,8 @@ public:
     allen::GUI gui;
     std::vector<allen::Target> target_;
     ICP icp;
-    allen::Frame output_matching, output_robot;
+    allen::Frame output_matching, output_robot, predict_posi;
+    allen::Target predict_target;
 
 private:
     void initSubscriber(void);
@@ -126,6 +127,7 @@ public:
     void tracking_Targets(std::vector<allen::Target> &_target);
     void display_Pointcloud(cv::Mat &_src1, cv::Mat &_src2, std::string _win_name);
     std::vector<cv::Point2f> extract_Contour(allen::Target &_robot, std::vector<bag_t> &_bag_cloud, bool _flag);
+    void get_PredictCoordinate(allen::Frame _predict_posi, allen::Frame _output_robot);
     void runLoop(void);
 
 };

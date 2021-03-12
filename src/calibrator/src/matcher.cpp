@@ -16,8 +16,7 @@ void matcher::scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx
 	int max_resolution = 2500;
     int size = std::min((int)msg->ranges.size(), max_resolution);
     float angle_min = msg->angle_min;
-    float angle_max = msg->angle_max;
-    float angle_increment = msg->angle_increment;
+    float angle_max = msg->angle_max; float angle_increment = msg->angle_increment;
     float range_min = (float)msg->range_min;
     float range_max = (float)msg->range_max;
 

@@ -165,7 +165,7 @@ void tracker::display_Globalmap(void)
                                                     grid_global.base_pt[SRCFRAME], grid_global.mm2pixel);
                 cv::circle(Canvas, tmp_robot_pt, 4, cv::Scalar(0,0,255), -1);
                 cv::putText(Canvas, 
-                    cv::format("[world]robot-> [x: %f][y: %f][th: %f]", output_robot.x, output_robot.y, output_robot.th*radian2degree), 
+                    cv::format("ROBOT[world]-> [x: %f][y: %f][th: %f]", output_robot.x, output_robot.y, output_robot.th*radian2degree), 
                     cv::Point(tmp_mark_pt.x, tmp_mark_pt.y+15), cv::FONT_HERSHEY_COMPLEX, 0.8f, cv::Scalar(0,0,255), 1, CV_AA);
             }
         }
@@ -173,12 +173,20 @@ void tracker::display_Globalmap(void)
         {
             cv::circle(Canvas, tmp_center_pt, target_[i].target_radius * grid_tracker.mm2pixel, cv::Scalar(0,255,0), 2);
             cv::putText(Canvas, 
-                cv::format("[world]GT-> [x: %f][y: %f]", target_[i].centroid_pt.x/1000.0f, target_[i].centroid_pt.y/1000.0f), 
+                cv::format("TARGET[world]-> [x: %f][y: %f]", target_[i].centroid_pt.x/1000.0f, target_[i].centroid_pt.y/1000.0f), 
                 cv::Point(tmp_mark_pt.x, tmp_mark_pt.y+15), cv::FONT_HERSHEY_COMPLEX, 0.8f, cv::Scalar(0,255,0), 1, CV_AA);
         }
         else
             cv::circle(Canvas, tmp_center_pt, target_[i].target_radius * grid_tracker.mm2pixel, cv::Scalar(255,0,0), 2);
-        tmp_mark_pt.y += 25;
+        tmp_mark_pt.y += 30;
+    }
+    if(flag.get_flag(allen::FLAG::Name::predictOn) && 
+        !std::isinf(predict_target.centroid_pt.x) && !std::isinf(predict_target.centroid_pt.y))
+    {
+        //Prediction of target from PF
+        cv::putText(Canvas, 
+            cv::format("PREDCITION[world]-> [x: %f][y: %f]", predict_target.centroid_pt.x/1000.0f, predict_target.centroid_pt.y/1000.0f), 
+            cv::Point(tmp_mark_pt.x, tmp_mark_pt.y+15), cv::FONT_HERSHEY_COMPLEX, 0.8f, cv::Scalar(0,255,0), 1, CV_AA);
     }
 
     //origin axis
@@ -695,12 +703,28 @@ void tracker::GetMouseEvent(cv::Mat &_canvas)
     {
         //reset
         target_.clear();
+        predict_target.reset();
         flag.resetFlag();
         gui.reset(_canvas);
         output_matching = allen::Frame();
         output_robot = allen::Frame();
         icp.reset();
     }
+}
+void tracker::get_PredictCoordinate(allen::Frame _predict_posi, allen::Frame _output_robot)
+{
+    cv::Mat tmp_canvas = gui.canvas.clone();
+
+    allen::Frame tmp_PF = _predict_posi;    //mm
+    allen::Target tmp_output;               //mm
+
+    /////////////debug///////////////
+    tmp_PF.x = 1000.0;
+    tmp_PF.y = 1000.0;
+    tmp_PF.th = 45.0;
+    /////////////////////////////////
+
+
 }
 void tracker::get_syncData(void)
 {
@@ -740,6 +764,10 @@ void tracker::runLoop(void)
             if(flag.get_flag(allen::FLAG::Name::targetOn))
             {
                 tracking_Targets(target_);
+                if(flag.get_flag(allen::FLAG::Name::predictOn))
+                {
+                    get_PredictCoordinate(predict_posi, output_robot);
+                }
             }
         }
         //GetMouseEvent(gui.canvas);
