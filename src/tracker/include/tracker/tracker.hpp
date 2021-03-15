@@ -6,13 +6,14 @@
 #include <sensor_msgs/LaserScan.h> 
 #include <tf/tf.h>
 #include <opencv2/opencv.hpp>
+#include <cona_msgs/GoalPose.h>
 
 #include "tracker/parameter.hpp"
 #include "tracker/templete.hpp"
 #include "tracker/sensor.hpp"
 #include "tracker/Flag.hpp"
 #include "tracker/gui.hpp"
-#include "tracker/ICP.hpp"
+#include "tracker/ICP.hpp" 
 
 #define SENSORNUM 4
 #define SRCFRAME 0
@@ -33,11 +34,12 @@ class tracker
 {
 private:
     ros::NodeHandle nh_;
-    ros::Subscriber scan_1_sub_, scan_2_sub_, scan_3_sub_, scan_4_sub_;
+    ros::Subscriber scan_1_sub_, scan_2_sub_, scan_3_sub_, scan_4_sub_, goalpose_sub_;
     double degree2radian, radian2degree;
     cv::RNG rng; 
     allen::FLAG flag;
     float margin_grid_tracker;
+    std::mutex predict_mtx;
 
 public:
     std::vector<sensor*> sensors;
@@ -49,11 +51,12 @@ public:
     std::vector<allen::Target> target_;
     ICP icp;
     allen::Frame output_matching, output_robot, predict_posi;
-    allen::Target predict_target;
+    allen::Target output_predict;
 
 private:
     void initSubscriber(void);
     void scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx);
+    void GoalPose_callback(const cona_msgs::GoalPose::ConstPtr &msg);
     void get_syncData(void); 
 public:
     tracker(ros::NodeHandle &_nh) :

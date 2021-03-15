@@ -6,6 +6,7 @@ void tracker::initSubscriber(void)
     scan_2_sub_ = nh_.subscribe<sensor_msgs::LaserScan>("/scan_2", 10, boost::bind(&tracker::scan_callback, this, _1, 1));
     scan_3_sub_ = nh_.subscribe<sensor_msgs::LaserScan>("/scan_3", 10, boost::bind(&tracker::scan_callback, this, _1, 2));
     scan_4_sub_ = nh_.subscribe<sensor_msgs::LaserScan>("/scan_4", 10, boost::bind(&tracker::scan_callback, this, _1, 3));
+    goalpose_sub_ = nh_.subscribe<cona_msgs::GoalPose>("/goalpose", 1, &tracker::GoalPose_callback, this);
 }
 void tracker::scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx)
 {
@@ -95,6 +96,16 @@ void tracker::scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx
         //ROS_INFO("[%s]Grid->rows: %d", sensors[idx]->child_frame.c_str(), sensors[idx]->Grid_local.rows);
     }
 }
+void tracker::GoalPose_callback(const cona_msgs::GoalPose::ConstPtr &msg)
+{
+    predict_mtx.lock();
+    predict_posi.x = msg->target_x_mm_from_robot;
+    predict_posi.y = msg->target_y_mm_from_robot;
+    predict_posi.th = 0.0;
+    ROS_INFO("Callback GoalPose[tracker]-> x: %f, y: %f, th: %f\n", msg->target_x_mm_from_robot, msg->target_y_mm_from_robot, 
+                                                                        msg->target_degree_from_robot);
+    predict_mtx.unlock();
+}
 void tracker::display_Globalmap(void)
 {
     if(!flag.get_flag(allen::FLAG::Name::imshow))   return;
@@ -181,11 +192,11 @@ void tracker::display_Globalmap(void)
         tmp_mark_pt.y += 30;
     }
     if(flag.get_flag(allen::FLAG::Name::predictOn) && 
-        !std::isinf(predict_target.centroid_pt.x) && !std::isinf(predict_target.centroid_pt.y))
+        !std::isinf(output_predict.centroid_pt.x) && !std::isinf(output_predict.centroid_pt.y))
     {
         //Prediction of target from PF
         cv::putText(Canvas, 
-            cv::format("PREDCITION[world]-> [x: %f][y: %f]", predict_target.centroid_pt.x/1000.0f, predict_target.centroid_pt.y/1000.0f), 
+            cv::format("PREDCITION[world]-> [x: %f][y: %f]", output_predict.centroid_pt.x/1000.0f, output_predict.centroid_pt.y/1000.0f), 
             cv::Point(tmp_mark_pt.x, tmp_mark_pt.y+15), cv::FONT_HERSHEY_COMPLEX, 0.8f, cv::Scalar(0,255,0), 1, CV_AA);
     }
 
@@ -703,7 +714,7 @@ void tracker::GetMouseEvent(cv::Mat &_canvas)
     {
         //reset
         target_.clear();
-        predict_target.reset();
+        output_predict.reset();
         flag.resetFlag();
         gui.reset(_canvas);
         output_matching = allen::Frame();
@@ -719,11 +730,38 @@ void tracker::get_PredictCoordinate(allen::Frame _predict_posi, allen::Frame _ou
     allen::Target tmp_output;               //mm
 
     /////////////debug///////////////
-    tmp_PF.x = 1000.0;
-    tmp_PF.y = 1000.0;
-    tmp_PF.th = 45.0;
+    //tmp_PF.x = 1.0;
+    //tmp_PF.y = 2.0;
+    //tmp_PF.th = 0.0;
     /////////////////////////////////
+    tmp_PF.x /= 1000.0;
+    tmp_PF.y /= 1000.0;
+    
+    printf("robot-> [x: %f, y: %f, th: %f], predict-> [x: %f, y: %f, th: %f]\n", 
+                                            _output_robot.x, _output_robot.y, _output_robot.th,     //radian
+                                            tmp_PF.x, tmp_PF.y, tmp_PF.th);
 
+    tf::Quaternion q_robot, q_pf;
+    //R
+    q_robot.setRPY(0, 0, _output_robot.th);
+    q_pf.setRPY(0, 0, tmp_PF.th);
+    tf::Matrix3x3 robot_r(q_robot);
+    tf::Matrix3x3 pf_r(q_pf);
+    //T
+    tf::Vector3 robot_T(_output_robot.x, _output_robot.y, 0.0);
+    tf::Vector3 pf_T(tmp_PF.x, tmp_PF.y, 0.0);
+    //output
+    tf::Matrix3x3 out_R = robot_r * pf_r;
+    tf::Vector3 out_T = robot_r * pf_T + robot_T;
+
+    double x = out_T.getX();
+    double y = out_T.getY();
+
+    //debug
+    cv::Point predict_pt = laser2grid(cv::Point2f(x*1000.0f, y*1000.0f), grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
+    printf("output_x: %lf, output_y: %lf, [g_x: %d, g_y: %d]\n", x, y, predict_pt.x, predict_pt.y);
+    cv::circle(tmp_canvas, predict_pt, 5, cv::Scalar(0,255,0), -1);
+    cv::imshow("Predict", tmp_canvas);
 
 }
 void tracker::get_syncData(void)
@@ -764,7 +802,8 @@ void tracker::runLoop(void)
             if(flag.get_flag(allen::FLAG::Name::targetOn))
             {
                 tracking_Targets(target_);
-                if(flag.get_flag(allen::FLAG::Name::predictOn))
+                //if(flag.get_flag(allen::FLAG::Name::predictOn))
+                if(1)
                 {
                     get_PredictCoordinate(predict_posi, output_robot);
                 }

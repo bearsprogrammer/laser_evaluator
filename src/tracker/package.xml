@@ -14,6 +14,7 @@
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>tf</depend>
+  <depend>cona_msgs</depend>
 
   <export>
 

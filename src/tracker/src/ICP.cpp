@@ -337,7 +337,7 @@ bool ICP::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index
 
 		if(from_inlier.rows <= 10 || to_inlier.rows <= 10)
 		{
-            std::cout << "fail" << std::endl;
+            //std::cout << "fail" << std::endl;
 			break;
 		}
 
@@ -370,7 +370,7 @@ bool ICP::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index
 		{
 			transform(from, points, output);
             from_inlier_ = from_inlier.clone();
-            std::cout<<"success"<<std::endl;
+            //std::cout<<"success"<<std::endl;
 			break;
 		}
 	}

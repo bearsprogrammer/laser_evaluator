@@ -24,13 +24,13 @@
     <joint name="map2laser3" type="fixed">
         <parent link="map"/>
         <child link="laser3"/>
-        <origin xyz="-2 -5 0" rpy="0 0 3.14" />
+        <origin xyz="-2 -5 0" rpy="0 0 -1.57" />
     </joint>
 
     <joint name="map2laser4" type="fixed">
         <parent link="map"/>
         <child link="laser4"/>
-        <origin xyz="2 4 0" rpy="0 0 0.785" />
+        <origin xyz="2 3 0" rpy="0 0 0.785" />
     </joint>
 
 </robot>

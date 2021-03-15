@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   sensor_msgs
   tf
+  cona_msgs
 )
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(OpenCV REQUIRED)
@@ -21,7 +22,7 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
 #  INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME} 
-  CATKIN_DEPENDS roscpp std_msgs sensor_msgs tf
+  CATKIN_DEPENDS roscpp std_msgs sensor_msgs tf cona_msgs
 #  DEPENDS system_lib
 )
 
