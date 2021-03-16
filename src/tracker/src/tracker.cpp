@@ -99,11 +99,13 @@ void tracker::scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx
 void tracker::GoalPose_callback(const cona_msgs::GoalPose::ConstPtr &msg)
 {
     predict_mtx.lock();
-    predict_posi.x = msg->target_x_mm_from_robot;
-    predict_posi.y = msg->target_y_mm_from_robot;
-    predict_posi.th = 0.0;
-    ROS_INFO("Callback GoalPose[tracker]-> x: %f, y: %f, th: %f\n", msg->target_x_mm_from_robot, msg->target_y_mm_from_robot, 
-                                                                        msg->target_degree_from_robot);
+    if(!flag.get_flag(allen::FLAG::Name::predictOn))    flag.set_flag_on(allen::FLAG::Name::predictOn);
+
+    predict_posi_.x = msg->target_x_mm_from_robot;
+    predict_posi_.y = msg->target_y_mm_from_robot;
+    predict_posi_.th = 0.0;
+    //ROS_INFO("Callback GoalPose[tracker]-> x: %f, y: %f, th: %f\n", msg->target_x_mm_from_robot, msg->target_y_mm_from_robot, 
+                                                                        //msg->target_degree_from_robot);
     predict_mtx.unlock();
 }
 void tracker::display_Globalmap(void)
@@ -174,30 +176,45 @@ void tracker::display_Globalmap(void)
                 //display robot contour from icp result
                 cv::Point tmp_robot_pt = laser2grid(cv::Point2f(output_robot.x*1000.0f, output_robot.y*1000.0f), 
                                                     grid_global.base_pt[SRCFRAME], grid_global.mm2pixel);
-                cv::circle(Canvas, tmp_robot_pt, 4, cv::Scalar(0,0,255), -1);
+                cv::circle(Canvas, tmp_robot_pt, 4, cv::Scalar(250,0,0), -1);
                 cv::putText(Canvas, 
                     cv::format("ROBOT[world]-> [x: %f][y: %f][th: %f]", output_robot.x, output_robot.y, output_robot.th*radian2degree), 
-                    cv::Point(tmp_mark_pt.x, tmp_mark_pt.y+15), cv::FONT_HERSHEY_COMPLEX, 0.8f, cv::Scalar(0,0,255), 1, CV_AA);
+                    cv::Point(tmp_mark_pt.x, tmp_mark_pt.y+15), cv::FONT_HERSHEY_COMPLEX, 0.8f, cv::Scalar(250,0,0), 1, CV_AA);
             }
         }
         else if(i == TARGET_IDX)
         {
-            cv::circle(Canvas, tmp_center_pt, target_[i].target_radius * grid_tracker.mm2pixel, cv::Scalar(0,255,0), 2);
+            cv::circle(Canvas, tmp_center_pt, target_[i].target_radius * grid_global.mm2pixel, cv::Scalar(0,255,0), 2);
             cv::putText(Canvas, 
                 cv::format("TARGET[world]-> [x: %f][y: %f]", target_[i].centroid_pt.x/1000.0f, target_[i].centroid_pt.y/1000.0f), 
                 cv::Point(tmp_mark_pt.x, tmp_mark_pt.y+15), cv::FONT_HERSHEY_COMPLEX, 0.8f, cv::Scalar(0,255,0), 1, CV_AA);
         }
         else
-            cv::circle(Canvas, tmp_center_pt, target_[i].target_radius * grid_tracker.mm2pixel, cv::Scalar(255,0,0), 2);
+            cv::circle(Canvas, tmp_center_pt, target_[i].target_radius * grid_global.mm2pixel, cv::Scalar(255,0,0), 2);
         tmp_mark_pt.y += 30;
     }
     if(flag.get_flag(allen::FLAG::Name::predictOn) && 
-        !std::isinf(output_predict.centroid_pt.x) && !std::isinf(output_predict.centroid_pt.y))
+        !std::isinf(eval_output.output_predict.centroid_pt.x) && !std::isinf(eval_output.output_predict.centroid_pt.y) &&
+        !std::isinf(eval_output.error_centroid))
     {
         //Prediction of target from PF
         cv::putText(Canvas, 
-            cv::format("PREDCITION[world]-> [x: %f][y: %f]", output_predict.centroid_pt.x/1000.0f, output_predict.centroid_pt.y/1000.0f), 
-            cv::Point(tmp_mark_pt.x, tmp_mark_pt.y+15), cv::FONT_HERSHEY_COMPLEX, 0.8f, cv::Scalar(0,255,0), 1, CV_AA);
+            cv::format("PREDCITION[world]-> [x: %f][y: %f]", eval_output.output_predict.centroid_pt.x/1000.0f, 
+                                                             eval_output.output_predict.centroid_pt.y/1000.0f), 
+            cv::Point(tmp_mark_pt.x, tmp_mark_pt.y+15), cv::FONT_HERSHEY_COMPLEX, 0.8f, cv::Scalar(0,0,255), 1, CV_AA);
+        tmp_mark_pt.y += 30;
+
+        cv::putText(Canvas, 
+            cv::format("ERROR[euclidean]-> [mm: %f]", eval_output.error_centroid), 
+            cv::Point(tmp_mark_pt.x, tmp_mark_pt.y+15), cv::FONT_HERSHEY_COMPLEX, 0.8f, cv::Scalar(255,255,255), 1, CV_AA);
+        //Predict
+        cv::Point predict_gridpt = laser2grid(eval_output.output_predict.centroid_pt, 
+                                            grid_global.base_pt[SRCFRAME], grid_global.mm2pixel);
+        cv::circle(Canvas, predict_gridpt, 5, cv::Scalar(0,0,255), -1);
+        //Ground-Truth
+        cv::Point GroundTruth_gridpt = laser2grid(target_[TARGET_IDX].centroid_pt, 
+                                                    grid_global.base_pt[SRCFRAME], grid_global.mm2pixel);
+        cv::line(Canvas, GroundTruth_gridpt, predict_gridpt, cv::Scalar(255,255,255));
     }
 
     //origin axis
@@ -515,7 +532,7 @@ void tracker::match_Robot(std::vector<allen::Target> &_target)
             if(!flag.get_flag(allen::FLAG::Name::robotOn))  flag.set_flag_on(allen::FLAG::Name::robotOn);
 
             //printf("output_matching: %lf, %lf, %lf\n", output_matching.x, output_matching.y, output_matching.th);
-            printf("output_robot: %lf, %lf, %lf\n\n", output_robot.x, output_robot.y, output_robot.th*radian2degree);
+            //printf("output_robot: %lf, %lf, %lf\n\n", output_robot.x, output_robot.y, output_robot.th*radian2degree);
         }
     }
     else
@@ -712,14 +729,19 @@ void tracker::GetMouseEvent(cv::Mat &_canvas)
         set_Target(target_, gui.drag_rect);
     if(flag.get_flag(allen::FLAG::Name::reset))
     {
+        reset_mtx.lock();
+
         //reset
-        target_.clear();
-        output_predict.reset();
         flag.resetFlag();
+        target_.clear();
         gui.reset(_canvas);
         output_matching = allen::Frame();
         output_robot = allen::Frame();
         icp.reset();
+        predict_posi_ = allen::Frame();
+        eval_output.reset();
+
+        reset_mtx.unlock();
     }
 }
 void tracker::get_PredictCoordinate(allen::Frame _predict_posi, allen::Frame _output_robot)
@@ -737,9 +759,9 @@ void tracker::get_PredictCoordinate(allen::Frame _predict_posi, allen::Frame _ou
     tmp_PF.x /= 1000.0;
     tmp_PF.y /= 1000.0;
     
-    printf("robot-> [x: %f, y: %f, th: %f], predict-> [x: %f, y: %f, th: %f]\n", 
-                                            _output_robot.x, _output_robot.y, _output_robot.th,     //radian
-                                            tmp_PF.x, tmp_PF.y, tmp_PF.th);
+    //printf("robot-> [x: %f, y: %f, th: %f], predict-> [x: %f, y: %f, th: %f]\n", 
+                                            //_output_robot.x, _output_robot.y, _output_robot.th,     //radian
+                                            //tmp_PF.x, tmp_PF.y, tmp_PF.th);
 
     tf::Quaternion q_robot, q_pf;
     //R
@@ -754,15 +776,24 @@ void tracker::get_PredictCoordinate(allen::Frame _predict_posi, allen::Frame _ou
     tf::Matrix3x3 out_R = robot_r * pf_r;
     tf::Vector3 out_T = robot_r * pf_T + robot_T;
 
-    double x = out_T.getX();
-    double y = out_T.getY();
+    double x = out_T.getX() * 1000.0;    //m to mm
+    double y = out_T.getY() * 1000.0;    //m to mm
 
     //debug
-    cv::Point predict_pt = laser2grid(cv::Point2f(x*1000.0f, y*1000.0f), grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
-    printf("output_x: %lf, output_y: %lf, [g_x: %d, g_y: %d]\n", x, y, predict_pt.x, predict_pt.y);
-    cv::circle(tmp_canvas, predict_pt, 5, cv::Scalar(0,255,0), -1);
-    cv::imshow("Predict", tmp_canvas);
+    //cv::Point predict_pt = laser2grid(cv::Point2f(x, y), grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
+    //printf("output_x: %lf, output_y: %lf, [g_x: %d, g_y: %d]\n", x, y, predict_pt.x, predict_pt.y);
+    //cv::circle(tmp_canvas, predict_pt, 5, cv::Scalar(0,255,0), -1);
+    //cv::imshow("Predict", tmp_canvas);
 
+    //output
+    tmp_output.centroid_pt = cv::Point2f(x, y);         
+    eval_output.output_predict.centroid_pt = tmp_output.centroid_pt;    //mm
+    cv::Point2f target_centroid = target_[TARGET_IDX].centroid_pt;
+
+    if(std::isinf(target_centroid.x) || std::isinf(target_centroid.y))      return;
+    eval_output.error_centroid = get_dist2f(target_centroid, eval_output.output_predict.centroid_pt);
+
+    printf("error_centroid: %f\n", eval_output.error_centroid);
 }
 void tracker::get_syncData(void)
 {
@@ -777,10 +808,12 @@ void tracker::get_syncData(void)
         sensors[i]->mtx_scan.lock();
         bag_cloud_[i] = sensors[i]->pointcloud;
         sensors[i]->mtx_scan.unlock();
-        //printf("bag_cloud[%d]-> size: %d\n", i, (int)bag_cloud_[i]->size());
-        //printf("sensors[%d]-> size: %d\n", i, (int)sensors[i]->pointcloud.size());
+
+        predict_mtx.lock();
+        eval_output.predict_posi = predict_posi_;
+        predict_mtx.unlock();
     }
-    //std::cout<<std::endl;
+
     if(!flag.get_flag(allen::FLAG::Name::dataOn))   flag.set_flag_on(allen::FLAG::Name::dataOn);
 }
 void tracker::runLoop(void)
@@ -802,10 +835,9 @@ void tracker::runLoop(void)
             if(flag.get_flag(allen::FLAG::Name::targetOn))
             {
                 tracking_Targets(target_);
-                //if(flag.get_flag(allen::FLAG::Name::predictOn))
-                if(1)
+                if(flag.get_flag(allen::FLAG::Name::predictOn))
                 {
-                    get_PredictCoordinate(predict_posi, output_robot);
+                    get_PredictCoordinate(eval_output.predict_posi, output_robot);
                 }
             }
         }

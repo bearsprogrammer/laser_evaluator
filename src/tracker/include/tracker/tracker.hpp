@@ -30,6 +30,25 @@
 
 using bag_t = std::vector<allen::LaserPointCloud>;
 
+class Eval_output
+{
+public:
+    allen::Frame predict_posi;
+    allen::Target output_predict;
+    float error_centroid;
+
+    Eval_output()
+    {
+        error_centroid = std::numeric_limits<float>::infinity();
+    }
+    ~Eval_output(){}
+    void reset()
+    {
+        predict_posi = allen::Frame();
+        output_predict.reset();
+        error_centroid = std::numeric_limits<float>::infinity();
+    }
+};
 class tracker
 {
 private:
@@ -39,7 +58,7 @@ private:
     cv::RNG rng; 
     allen::FLAG flag;
     float margin_grid_tracker;
-    std::mutex predict_mtx;
+    std::mutex predict_mtx, reset_mtx;
 
 public:
     std::vector<sensor*> sensors;
@@ -50,8 +69,9 @@ public:
     allen::GUI gui;
     std::vector<allen::Target> target_;
     ICP icp;
-    allen::Frame output_matching, output_robot, predict_posi;
+    allen::Frame output_matching, output_robot, predict_posi_;
     allen::Target output_predict;
+    Eval_output eval_output;
 
 private:
     void initSubscriber(void);
