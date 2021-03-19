@@ -528,8 +528,7 @@ void tracker::match_Robot(std::vector<allen::Target> &_target)
             output_matching.rearrange_Angle();
 
             output_robot = get_RobotPose(output_matching);
-
-            if(!flag.get_flag(allen::FLAG::Name::robotOn))  flag.set_flag_on(allen::FLAG::Name::robotOn);
+if(!flag.get_flag(allen::FLAG::Name::robotOn))  flag.set_flag_on(allen::FLAG::Name::robotOn);
 
             //printf("output_matching: %lf, %lf, %lf\n", output_matching.x, output_matching.y, output_matching.th);
             //printf("output_robot: %lf, %lf, %lf\n\n", output_robot.x, output_robot.y, output_robot.th*radian2degree);
