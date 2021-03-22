@@ -24,7 +24,7 @@
     <joint name="map2laser3" type="fixed">
         <parent link="map"/>
         <child link="laser3"/>
-        <origin xyz="-2 -5 0" rpy="0 0 -1.57" />
+        <origin xyz="-2 -5 0" rpy="0 0 0.785" />
     </joint>
 
     <joint name="map2laser4" type="fixed">
