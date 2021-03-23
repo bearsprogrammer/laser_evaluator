@@ -15,8 +15,9 @@ void tracker::scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx
     allen::Grid_param tmp_grid;
     cv::Mat Grid(grid.grid_row, grid.grid_col, CV_8UC3, cv::Scalar(125, 125, 125));		
 
-	int max_resolution = 2500;
-    int size = std::min((int)msg->ranges.size(), max_resolution);
+	//int max_resolution = 2500;
+    //int size = std::min((int)msg->ranges.size(), max_resolution);
+    int size = (int)msg->ranges.size();
     float angle_min = msg->angle_min;
     float angle_max = msg->angle_max;
     float angle_increment = msg->angle_increment;
@@ -435,7 +436,7 @@ std::vector<cv::Point2f> tracker::extract_Contour(allen::Target &_robot, std::ve
                 allen::LaserPointCloud tmp_pt = tmp_cloud[j];           //mm
                 float dist = get_dist2f(centroid_robot, tmp_pt.laser_coordinate_);
                 //printf("dist: %f\n", dist);
-                if(dist < 500.0f)
+                if(dist < 700.0f)
                 {
                     cv::Point tmp_grid = 
                             laser2grid(tmp_pt.laser_coordinate_, grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
