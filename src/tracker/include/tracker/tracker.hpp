@@ -14,6 +14,7 @@
 #include "tracker/Flag.hpp"
 #include "tracker/gui.hpp"
 #include "tracker/ICP.hpp" 
+#include "tracker/logger.hpp"
 
 #define SENSORNUM 4
 #define SRCFRAME 0
@@ -59,6 +60,7 @@ private:
     allen::FLAG flag;
     float margin_grid_tracker;
     std::mutex predict_mtx, reset_mtx;
+    logger log_error;
 
 public:
     std::vector<sensor*> sensors;
@@ -72,6 +74,8 @@ public:
     allen::Frame output_matching, output_robot, predict_posi_;
     allen::Target output_predict;
     Eval_output eval_output;
+    std::vector<allen::Evaluation> eval_bag;
+    cv::Mat eval_mat;
 
 private:
     void initSubscriber(void);
@@ -119,6 +123,8 @@ public:
         grid_global.base_pt.push_back(cv::Point2f(GRID_MARGIN, GRID_MARGIN));
         grid_global.base_pt.push_back(cv::Point2f((float)grid_global.grid_col-GRID_MARGIN, (float)grid_global.grid_row-GRID_MARGIN));
 
+        log_error = logger("src/tracker/log/", "eval_dist", cv::FileStorage::WRITE);
+
         initSubscriber();
     }
     ~tracker()
@@ -151,6 +157,7 @@ public:
     void display_Pointcloud(cv::Mat &_src1, cv::Mat &_src2, std::string _win_name);
     std::vector<cv::Point2f> extract_Contour(allen::Target &_robot, std::vector<bag_t> &_bag_cloud, bool _flag);
     void get_PredictCoordinate(allen::Frame _predict_posi, allen::Frame _output_robot);
+    void assembly_evalData(void);
     void runLoop(void);
 
 };

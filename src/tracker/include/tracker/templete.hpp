@@ -2,6 +2,20 @@
 #define LaserPointCloud_H
 namespace allen
 {
+    class Evaluation
+    {
+    public:
+        ros::Time time;
+        float error_target2GT;
+        cv::Point2f predict_world;
+        cv::Point2f GT_world;
+
+    public:
+        Evaluation()
+        {
+        }
+
+    };
     class LaserPointCloud
     { 
     public:
@@ -59,8 +73,7 @@ namespace allen
                 return;
             }
             cv::Point tmp_center;
-            tmp_center.x = this->target_rect.x + (this->target_rect.width/2);  
-            tmp_center.y = this->target_rect.y + (this->target_rect.height/2);  
+            tmp_center.x = this->target_rect.x + (this->target_rect.width/2);  tmp_center.y = this->target_rect.y + (this->target_rect.height/2);  
 
             if(this->target_rect.contains(tmp_center) == false)
             {

@@ -177,7 +177,9 @@ void tracker::display_Globalmap(void)
                 //display robot contour from icp result
                 cv::Point tmp_robot_pt = laser2grid(cv::Point2f(output_robot.x*1000.0f, output_robot.y*1000.0f), 
                                                     grid_global.base_pt[SRCFRAME], grid_global.mm2pixel);
-                cv::circle(Canvas, tmp_robot_pt, 4, cv::Scalar(250,0,0), -1);
+                cv::circle(Canvas, tmp_robot_pt, 4, cv::Scalar(250,0,0), -1);   //ICP
+                cv::circle(Canvas, tmp_center_pt, target_[i].target_radius * grid_global.mm2pixel, 
+                                                                            cv::Scalar(0,0,255), 2); //tracking
                 cv::putText(Canvas, 
                     cv::format("ROBOT[world]-> [x: %f][y: %f][th: %f]", output_robot.x, output_robot.y, output_robot.th*radian2degree), 
                     cv::Point(tmp_mark_pt.x, tmp_mark_pt.y+15), cv::FONT_HERSHEY_COMPLEX, 0.8f, cv::Scalar(250,0,0), 1, CV_AA);
@@ -529,11 +531,16 @@ void tracker::match_Robot(std::vector<allen::Target> &_target)
             output_matching.rearrange_Angle();
 
             output_robot = get_RobotPose(output_matching);
-if(!flag.get_flag(allen::FLAG::Name::robotOn))  flag.set_flag_on(allen::FLAG::Name::robotOn);
+            if(!flag.get_flag(allen::FLAG::Name::robotOn))  flag.set_flag_on(allen::FLAG::Name::robotOn);
 
             //printf("output_matching: %lf, %lf, %lf\n", output_matching.x, output_matching.y, output_matching.th);
             //printf("output_robot: %lf, %lf, %lf\n\n", output_robot.x, output_robot.y, output_robot.th*radian2degree);
         }
+        else
+        {
+            std::cout << "fail matching" << std::endl;
+        }
+        
     }
     else
     {
@@ -730,6 +737,10 @@ void tracker::GetMouseEvent(cv::Mat &_canvas)
     if(flag.get_flag(allen::FLAG::Name::reset))
     {
         reset_mtx.lock();
+        //logging
+        assembly_evalData();
+        log_error.write("bag", eval_mat);
+        log_error.end();
 
         //reset
         flag.resetFlag();
@@ -740,6 +751,8 @@ void tracker::GetMouseEvent(cv::Mat &_canvas)
         icp.reset();
         predict_posi_ = allen::Frame();
         eval_output.reset();
+        eval_bag.clear();
+        eval_mat = cv::Mat();
 
         reset_mtx.unlock();
     }
@@ -788,12 +801,41 @@ void tracker::get_PredictCoordinate(allen::Frame _predict_posi, allen::Frame _ou
     //output
     tmp_output.centroid_pt = cv::Point2f(x, y);         
     eval_output.output_predict.centroid_pt = tmp_output.centroid_pt;    //mm
-    cv::Point2f target_centroid = target_[TARGET_IDX].centroid_pt;
+    cv::Point2f target_centroid = target_[TARGET_IDX].centroid_pt;      //ground-truth
 
     if(std::isinf(target_centroid.x) || std::isinf(target_centroid.y))      return;
     eval_output.error_centroid = get_dist2f(target_centroid, eval_output.output_predict.centroid_pt);
 
     printf("error_centroid: %f\n", eval_output.error_centroid);
+
+    allen::Evaluation tmp_eval;
+    tmp_eval.time = ros::Time::now();
+    tmp_eval.error_target2GT = eval_output.error_centroid;
+    tmp_eval.GT_world = target_centroid;
+    tmp_eval.predict_world = eval_output.output_predict.centroid_pt;
+    eval_bag.push_back(tmp_eval);
+}
+void tracker::assembly_evalData(void)
+{
+    if((int)eval_bag.size() == 0)
+    {
+        ROS_ERROR("Eval_bag is empty..");
+        return;
+    }
+
+    cv::Mat logging_mat((int)eval_bag.size(), 6, CV_64FC1, cv::Scalar(0.0f));
+    for(int i = 0; i < (int)eval_bag.size(); i++) 
+    {
+        logging_mat.at<double>(i, 0) = eval_bag[i].time.toSec();
+        logging_mat.at<double>(i, 1) = (double)eval_bag[i].error_target2GT;
+        logging_mat.at<double>(i, 2) = (double)eval_bag[i].predict_world.x;
+        logging_mat.at<double>(i, 3) = (double)eval_bag[i].predict_world.y;
+        logging_mat.at<double>(i, 4) = (double)eval_bag[i].GT_world.x;
+        logging_mat.at<double>(i, 5) = (double)eval_bag[i].GT_world.y;
+    }
+
+    eval_mat = logging_mat.clone();
+
 }
 void tracker::get_syncData(void)
 {
