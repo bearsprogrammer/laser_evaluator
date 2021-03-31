@@ -117,10 +117,10 @@ void ICP::centroid(cv::Mat& target, cv::Mat& center)
     else
         std::cout << "[ICP]-> Unknown type for centroid" << std::endl;
 }
-void ICP::match(cv::flann::Index& flann_idx, cv::Mat& from, cv::Mat& to, 
-        cv::Mat& from_inlier, cv::Mat& to_inlier, double ratio, cv::Mat& draw)
+void ICP::match(cv::flann::Index& flann_idx, cv::Mat& from, cv::Mat& to
+	, cv::Mat& from_inlier, cv::Mat& to_inlier, double& inlier_midian_dist
+	, cv::Mat& draw)
 {
-
     bool draw_process = !draw.empty();
 
     cv::Mat index, dists;
@@ -163,6 +163,7 @@ void ICP::match(cv::flann::Index& flann_idx, cv::Mat& from, cv::Mat& to,
 
     int median_pos = (int)((float)in_dist_sorted.rows*0.6f);
     float threshold = 100.0f*in_dist_sorted.at<float>(median_pos, 0);
+    inlier_midian_dist = (double)in_dist_sorted.at<float>(median_pos, 0);
 
     int inlier_counter = 0;
     for(int i=0; i<from.rows; i++)
@@ -177,9 +178,7 @@ void ICP::match(cv::flann::Index& flann_idx, cv::Mat& from, cv::Mat& to,
             continue;
         }
 
-        if(ratio < 0)
-            in = true;
-        else if(dists.at<float>(i, 0) > threshold)
+        if(dists.at<float>(i, 0) > threshold)
             in = false;
 
         if(in) inlier_counter++;
@@ -234,7 +233,7 @@ void ICP::match(cv::flann::Index& flann_idx, cv::Mat& from, cv::Mat& to,
                     plot1.cols/2 - m2p1*(to.at<float>(i, 1) - c_col),
                     plot1.rows/2 - m2p1*(to.at<float>(i, 0) - c_row)
                 );	
-                cv::circle(plot1, p, 1, cv::Scalar(0, 0, 255));			//to
+                cv::circle(plot1, p, 1, cv::Scalar(0, 0, 255));
             }
 
             for(int i=0; i<from.rows; i++)
@@ -243,7 +242,7 @@ void ICP::match(cv::flann::Index& flann_idx, cv::Mat& from, cv::Mat& to,
                     plot1.cols/2 - m2p1*(from.at<float>(i, 1) - c_col),
                     plot1.rows/2 - m2p1*(from.at<float>(i, 0) - c_row)
                 );	
-                cv::circle(plot1, p, 1, cv::Scalar(255, 0, 0));			//from
+                cv::circle(plot1, p, 1, cv::Scalar(255, 0, 0));
             }
 
             for(int i=0; i<from_inlier.rows; i++)
@@ -256,7 +255,7 @@ void ICP::match(cv::flann::Index& flann_idx, cv::Mat& from, cv::Mat& to,
                     plot1.cols/2 - m2p1*(to_inlier.at<float>(i, 1) - c_col),
                     plot1.rows/2 - m2p1*(to_inlier.at<float>(i, 0) - c_row)
                 );
-                cv::line(plot1, from_p, to_p, cv::Scalar(0, 255, 0));	//inlier
+                cv::line(plot1, from_p, to_p, cv::Scalar(0, 255, 0));	
             }
 
             draw.push_back(plot1);
@@ -282,45 +281,56 @@ void ICP::match(cv::flann::Index& flann_idx, cv::Mat& from, cv::Mat& to,
             draw.push_back(dist_draw);
         }
     }
-}
+    }
 bool ICP::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index &flann_idx, cv::Mat &draw)
 {
-    bool draw_result = !draw.empty();
+	double output_confidence = 0.0;
+	double threashold_inlier_midian_dist = 0.008;
+	double threashold_low_ratio = 0.1;
+
+	bool draw_result = !draw.empty();
+
 	output.x = 0.0;
 	output.y = 0.0;
 	output.th = 0.0;
 
 	if(from.cols != 2 || to.cols != 2)
 	{
-		ROS_ERROR("[matcher]-> cols of from or to mat is not 2");
-		return false;
+		ROS_ERROR("cols of from or to mat is not 2");
+		return output_confidence;
 	}
 
 	if(from.rows <= 10 || to.rows <= 10)
 	{
-		ROS_ERROR("[matcher]-> Not enough data. from: %d, to: %d", from.rows, to.rows);
-		return false;
+		ROS_WARN("Not enough data. from: %d, to: %d", 
+			from.rows, to.rows);
+		return output_confidence;
 	}
 
-	double ratio = 1.0;	
 	cv::Mat points;
 	
-	//cona::Timer iter_timer;
-	//iter_timer.tic();
 	int iter=0;
 
 	cv::Mat matching_draw;
 
 	double max_th = 20.0 / 180.0 * (double)M_PI;
 
+	double inlier_rate = 0.0;
+	double inlier_midian_dist = 0.0;	
 	for(; iter<50; iter++)
 	{
-		matching_draw = cv::Mat(1, 500, CV_8UC3, cv::Scalar(255, 255, 255)); 
-		transform(from, points, output);
-		cv::Mat from_inlier, to_inlier;
-		match(flann_idx, points, to, from_inlier, to_inlier, ratio, matching_draw);
+		if(draw_result)
+			matching_draw = cv::Mat(1, 500, CV_8UC3, cv::Scalar(255, 255, 255));
 
-        //printf("[i:%d]from_inlier cnt: %d\n", iter, from_inlier.rows);
+		transform(from, points, output);
+
+		cv::Mat from_inlier, to_inlier;
+		match(flann_idx, points, to, from_inlier, to_inlier, inlier_midian_dist, 
+			matching_draw);
+
+//		result_to_inlier = to_inlier.clone(); //yn
+
+		inlier_rate = (double)from_inlier.rows / (double)from.rows;
 
 		if(!matching_draw.empty())
 		{
@@ -329,15 +339,37 @@ bool ICP::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index
 					iter, output.x, output.y, output.th), 
 				cv::Point(15, 25), 0, 0.5, cv::Scalar(0, 0, 0)
 			);
-            cv::imshow("icp", matching_draw);
-            //cv::waitKey(0);
-			//bool success = cv::imwrite(cv::format("/home/allenkim/log/%lf.jpg", 
-				//ros::Time::now().toSec()), matching_draw);
+
+			cv::putText(matching_draw, cv::format("midian: %10lf ratio: %5.3lf", 
+					inlier_midian_dist, inlier_rate),
+				cv::Point(15, 55), 0, 0.5, cv::Scalar(0, 0, 0));
+
+
+			if(!img_log_path.empty()) 
+			{
+				mkdir(img_log_path.c_str(), 0777);
+				cv::imwrite(img_log_path+cv::format("%lf.jpg", 
+					ros::Time::now().toSec()), matching_draw);
+			}
 		}
 
 		if(from_inlier.rows <= 10 || to_inlier.rows <= 10)
 		{
-            //std::cout << "fail" << std::endl;
+			inlier_rate = 0.0;
+			break;
+		}
+
+		if(iter>=10 && inlier_rate < threashold_low_ratio)
+		{
+			ROS_WARN("Low matching ratio: %lf", inlier_rate);
+			inlier_rate = 0.0;
+			break;
+		}
+
+		if(iter>=30 && inlier_midian_dist > threashold_inlier_midian_dist)
+		{
+			ROS_WARN("Cannot find solution");
+			inlier_rate = 0.0;
 			break;
 		}
 
@@ -369,79 +401,25 @@ bool ICP::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index
 		if(fabs(dx)<0.005f && fabs(dy)<0.005f && fabs(dth) < 0.0005f)
 		{
 			transform(from, points, output);
-            from_inlier_ = from_inlier.clone();
-            //std::cout<<"success"<<std::endl;
 			break;
 		}
 	}
 
-	if(1)
-	{
-		points.copyTo(from);
-	}
+	from = points.clone();
+
+	if(inlier_rate < threashold_low_ratio) output_confidence = 0.0;
+	else if(inlier_midian_dist > threashold_inlier_midian_dist) output_confidence = 0.0;
+	else output_confidence = 1.0;
 
 	if(draw_result)
 	{
-		float min_col = to.at<float>(0, 1);
-		float max_col = to.at<float>(0, 1);
-		float min_row = to.at<float>(0, 0);
-		float max_row = to.at<float>(0, 0);
-		for(int i=1; i<to.rows; i++)
-		{
-			if(min_col > to.at<float>(i, 1)) min_col = to.at<float>(i, 1);
-			if(max_col < to.at<float>(i, 1)) max_col = to.at<float>(i, 1);
-			if(min_row > to.at<float>(i, 0)) min_row = to.at<float>(i, 0);
-			if(max_row < to.at<float>(i, 0)) max_row = to.at<float>(i, 0);
-		}
+		draw = matching_draw.clone();
 
-		if(max_col-min_col != 0 && max_row-min_row != 0)
-		{
-			float m2p = std::min(
-				((float)draw.cols - 20.0f)/(max_col-min_col), 
-				((float)draw.rows - 20.0f)/(max_row-min_row)
+		if(output_confidence == 0.0)
+			cv::rectangle(draw, cv::Rect(0, 0, draw.cols, draw.rows), 
+				cv::Scalar(0, 0, 255), 5
 			);
-
-			float c_col = (max_col+min_col) / 2.0f;
-			float c_row = (max_row+min_row) / 2.0f;
-
-			for(int i=0; i<to.rows; i++)
-			{
-				cv::Point2f p(
-					draw.cols/2 - m2p*(to.at<float>(i, 1) - c_col), draw.rows/2 - m2p*(to.at<float>(i, 0) - c_row)
-				);	
-				cv::circle(draw, p, 3, cv::Scalar(0, 0, 255));		//to(t)
-			}
-
-			cv::Mat init_points = from.clone();
-//			transform(from, init_points, init);
-			for(int i=0; i<points.rows; i++)
-			{
-				cv::Point2f p(
-					draw.cols/2 - m2p*(init_points.at<float>(i, 1) - c_col),
-					draw.rows/2 - m2p*(init_points.at<float>(i, 0) - c_row)
-				);	
-				//cv::circle(draw, p, 1, cv::Scalar(255, 0, 0));		//from(t-n)
-			}
-
-			cv::Mat output_points;
-			output.translate(init_points, output_points);
-
-			cv::Mat result_points = output_points;
-			for(int i=0; i<result_points.rows; i++)
-			{
-				cv::Point2f p(
-					draw.cols/2 - m2p*(result_points.at<float>(i, 1) - c_col),	
-					draw.rows/2 - m2p*(result_points.at<float>(i, 0) - c_row)
-				);	
-				cv::circle(draw, p, 1, cv::Scalar(0, 255, 0));		//result
-			}
-
-			//cv::putText(draw, cv::format("iter: %5.1lf i: %d", 
-					//iter_timer.get_ms(), iter),
-				//cv::Point(15, 25), 0, 0.8, cv::Scalar(0, 0, 0));
-		}
 	}
 
-
-    return true;
+	return output_confidence;
 }

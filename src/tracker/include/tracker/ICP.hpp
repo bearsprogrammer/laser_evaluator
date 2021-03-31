@@ -6,19 +6,23 @@
 #include <mutex>
 #include <cmath>
 #include <opencv2/opencv.hpp>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "tracker/parameter.hpp"
 
 class ICP
 {
 private:
     double degree2radian;
+    std::string img_log_path;
 
 private:
     void transform(cv::Mat& from, cv::Mat& to, allen::Frame frame);
     double getPointDist(cv::Mat& data, int idx1, int idx2);
     void centroid(cv::Mat& target, cv::Mat& center);
-    void match(cv::flann::Index& flann_idx, cv::Mat& from, cv::Mat& to, 
-            cv::Mat& from_inlier, cv::Mat& to_inlier, double ratio, cv::Mat& draw);
+    void match(cv::flann::Index& flann_idx, cv::Mat& from, cv::Mat& to
+        , cv::Mat& from_inlier, cv::Mat& to_inlier, double& inlier_midian_dist
+        , cv::Mat& draw);
 
 public:
     cv::Mat from_inlier_;

@@ -177,9 +177,9 @@ void tracker::display_Globalmap(void)
                 //display robot contour from icp result
                 cv::Point tmp_robot_pt = laser2grid(cv::Point2f(output_robot.x*1000.0f, output_robot.y*1000.0f), 
                                                     grid_global.base_pt[SRCFRAME], grid_global.mm2pixel);
-                cv::circle(Canvas, tmp_robot_pt, 4, cv::Scalar(250,0,0), -1);   //ICP
-                cv::circle(Canvas, tmp_center_pt, target_[i].target_radius * grid_global.mm2pixel, 
-                                                                            cv::Scalar(0,0,255), 2); //tracking
+                cv::circle(Canvas, tmp_robot_pt, 10, cv::Scalar(0,255,0), 2);   //ICP
+                //cv::circle(Canvas, tmp_center_pt, target_[i].target_radius * grid_global.mm2pixel, 
+                                                                            //cv::Scalar(0,0,255), 2); //tracking
                 cv::putText(Canvas, 
                     cv::format("ROBOT[world]-> [x: %f][y: %f][th: %f]", output_robot.x, output_robot.y, output_robot.th*radian2degree), 
                     cv::Point(tmp_mark_pt.x, tmp_mark_pt.y+15), cv::FONT_HERSHEY_COMPLEX, 0.8f, cv::Scalar(250,0,0), 1, CV_AA);
@@ -520,9 +520,9 @@ void tracker::match_Robot(std::vector<allen::Target> &_target)
 
         cv::flann::Index flann_idx(src_frame, cv::flann::KDTreeIndexParams(), cvflann::FLANN_DIST_EUCLIDEAN);
         allen::Frame tmp_output;
-        bool success = icp.run(dst_frame_, src_frame, tmp_output, flann_idx, draw);
+        double confidence = icp.run(dst_frame_, src_frame, tmp_output, flann_idx, draw);
 
-        if(success)
+        if(confidence)
         {
             //Initial-guess
             output_matching.x += tmp_output.x;
