@@ -357,7 +357,9 @@ void tracker::tracking_Targets(std::vector<allen::Target> &_target)
         _target[i] = tmp_target;
     }
 
-    match_Robot(_target);
+    //match_Robot_old(_target);
+    match_Robot_new(_target);
+
     //std::cout << std::endl;
     //std::cout << std::endl;
     //cv::imshow("debug", tmp_debug_mat);
@@ -419,12 +421,12 @@ void tracker::display_Pointcloud(cv::Mat &_src1, cv::Mat &_src2, std::string _wi
 }
 std::vector<cv::Point2f> tracker::extract_Contour(allen::Target &_robot, std::vector<bag_t> &_bag_cloud, bool _flag)
 {
-    if((int)_robot.object_pts.size() == 0)  return std::vector<cv::Point2f>();
 
     cv::Mat tmp_canvas = gui.canvas.clone();
     cv::Mat tmp_canvas_new(gui.canvas.rows, gui.canvas.cols, CV_8UC3, cv::Scalar(125,125,125));
+
     std::vector<cv::Point2f> output_contour;
-    if(_flag)
+    if(_flag)   //after matching
     {
         cv::Point2f centroid_robot(output_robot.x, output_robot.y);     //m
         centroid_robot.x *= 1000.0f;
@@ -453,6 +455,7 @@ std::vector<cv::Point2f> tracker::extract_Contour(allen::Target &_robot, std::ve
     }
     else
     {
+        if((int)_robot.object_pts.size() == 0)  return std::vector<cv::Point2f>();
         //set search region
         cv::Rect tmp_region = _robot.set_Region(_robot.center_pt);
         cv::Mat tmp_contour = tmp_canvas(tmp_region);
@@ -488,7 +491,7 @@ std::vector<cv::Point2f> tracker::extract_Contour(allen::Target &_robot, std::ve
     }
     
 }
-void tracker::match_Robot(std::vector<allen::Target> &_target)
+void tracker::match_Robot_old(std::vector<allen::Target> &_target)
 {
     if((int)_target.size() != TARGETNUM)    return;
 
@@ -514,9 +517,7 @@ void tracker::match_Robot(std::vector<allen::Target> &_target)
         src_frame = cv::Mat((int)src_points.size(), 2, CV_32FC1, src_points.data());     //from
         dst_frame = cv::Mat((int)dst_points.size(), 2, CV_32FC1, dst_points.data());     //to
 
-        //display_Pointcloud(src_frame, dst_frame, "before");
         output_matching.translate(dst_frame, dst_frame_);       
-        //display_Pointcloud(src_frame, dst_frame_, "after");
 
         cv::flann::Index flann_idx(src_frame, cv::flann::KDTreeIndexParams(), cvflann::FLANN_DIST_EUCLIDEAN);
         allen::Frame tmp_output;
@@ -548,6 +549,18 @@ void tracker::match_Robot(std::vector<allen::Target> &_target)
         return;
     }
     
+
+}
+void tracker::match_Robot_new(std::vector<allen::Target> &_target)
+{
+    if((int)_target.size() != TARGETNUM)    return;
+
+    std::vector<cv::Point2f> tmp_model_points = _target[ROBOT_IDX].src_object_pts;
+    std::vector<cv::Point2f> tmp_observ_points = 
+                                extract_Contour(_target[ROBOT_IDX], bag_cloud_, flag.get_flag(allen::FLAG::Name::robotOn));
+
+    
+
 
 }
 allen::Frame tracker::get_RobotPose(allen::Frame _icp_pose)

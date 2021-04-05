@@ -137,7 +137,8 @@ public:
             //delete *it_bag;
     }
     void display_Globalmap(void);
-    void match_Robot(std::vector<allen::Target> &_target);
+    void match_Robot_old(std::vector<allen::Target> &_target);
+    void match_Robot_new(std::vector<allen::Target> &_target);
     cv::Point2f rearrange_Centroid(cv::Point _grid_src, cv::Point2f _laser_src, std::vector<bag_t> &_bag_cloud, 
                                         cv::Mat &_debug_mat, std::vector<cv::Point2f> &_tmp_object_pts);
     allen::Frame get_RobotPose(allen::Frame _icp_pose);
