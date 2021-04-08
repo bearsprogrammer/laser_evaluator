@@ -15,6 +15,7 @@ class ICP
 private:
     double degree2radian;
     std::string img_log_path;
+    cv::Mat draw_mat_result;
 
 private:
     void transform(cv::Mat& from, cv::Mat& to, allen::Frame frame);
@@ -31,10 +32,11 @@ public:
     ICP(/* args */)
     {
         degree2radian = (double)M_PI / 180.0;
+        img_log_path = "src/tracker/log/icp/";
     }
     ~ICP()
     {}
-    bool run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index &flann_idx, cv::Mat &draw);
+    double run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index &flann_idx, cv::Mat &draw);
     void reset()
     {
         this->from_inlier_ = cv::Mat();

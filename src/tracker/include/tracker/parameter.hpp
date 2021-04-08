@@ -83,7 +83,7 @@ namespace allen
                                                                     //_dst.at<float>(i, 0), _dst.at<float>(i, 1));
             }
         }
-        Frame add_Frame(Frame &_src)
+        Frame add_Motion(Frame &_src)
         {
             double d2r = 3.141592 / 180.0;
             double base_radian_th = this->th*d2r;

@@ -61,6 +61,8 @@ private:
     float margin_grid_tracker;
     std::mutex predict_mtx, reset_mtx;
     logger log_error;
+    double confidence;
+    cv::Mat model_frame_output;
 
 public:
     std::vector<sensor*> sensors;
@@ -153,7 +155,7 @@ public:
     void GetMouseEvent(cv::Mat &_canvas);
     void set_Target(std::vector<allen::Target> &_target, cv::Rect _target_rect);
     void init_SRC(allen::Target &_target);
-    void get_ZeroMeaned(std::vector<cv::Point2f> &_pointcloud, cv::Point2f _mean_pt);
+    void get_ZeroMeaned(allen::Target &_target, cv::Point2f _mean_pt);
     void tracking_Targets(std::vector<allen::Target> &_target);
     void display_Pointcloud(cv::Mat &_src1, cv::Mat &_src2, std::string _win_name);
     std::vector<cv::Point2f> extract_Contour(allen::Target &_robot, std::vector<bag_t> &_bag_cloud, bool _flag);

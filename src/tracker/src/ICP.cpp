@@ -282,7 +282,7 @@ void ICP::match(cv::flann::Index& flann_idx, cv::Mat& from, cv::Mat& to
         }
     }
     }
-bool ICP::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index &flann_idx, cv::Mat &draw)
+double ICP::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index &flann_idx, cv::Mat &draw)
 {
 	double output_confidence = 0.0;
 	double threashold_inlier_midian_dist = 0.008;
@@ -347,9 +347,10 @@ bool ICP::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index
 
 			if(!img_log_path.empty()) 
 			{
-				mkdir(img_log_path.c_str(), 0777);
-				cv::imwrite(img_log_path+cv::format("%lf.jpg", 
-					ros::Time::now().toSec()), matching_draw);
+				//mkdir(img_log_path.c_str(), 0777);
+				//cv::imwrite(img_log_path+cv::format("%lf.jpg", 
+					//ros::Time::now().toSec()), matching_draw);
+                //draw_mat_result = matching_draw.clone();
 			}
 		}
 
@@ -409,12 +410,14 @@ bool ICP::run(cv::Mat &from, cv::Mat &to, allen::Frame &output, cv::flann::Index
 
 	if(inlier_rate < threashold_low_ratio) output_confidence = 0.0;
 	else if(inlier_midian_dist > threashold_inlier_midian_dist) output_confidence = 0.0;
-	else output_confidence = 1.0;
+	else 
+    {
+        output_confidence = 1.0;
+    }
 
 	if(draw_result)
 	{
 		draw = matching_draw.clone();
-
 		if(output_confidence == 0.0)
 			cv::rectangle(draw, cv::Rect(0, 0, draw.cols, draw.rows), 
 				cv::Scalar(0, 0, 255), 5
