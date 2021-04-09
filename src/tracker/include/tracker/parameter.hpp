@@ -83,19 +83,43 @@ namespace allen
                                                                     //_dst.at<float>(i, 0), _dst.at<float>(i, 1));
             }
         }
-        Frame add_Motion(Frame &_src)
+        cv::Mat add_Motion(Frame &_src)
         {
-            double d2r = 3.141592 / 180.0;
-            double base_radian_th = this->th*d2r;
+            cv::Mat outputRT;
+            cv::Mat icpRT;
+            icpRT = cv::Mat::eye(3, 3, CV_32FC1);
 
-            Frame output;
-            output.x = this->x + _src.x*cos(base_radian_th) - _src.y*sin(base_radian_th);
-            output.y = this->y + _src.x*sin(base_radian_th) + _src.y*cos(base_radian_th);
-            output.th = this->th + _src.th;
-            output.rearrange_Angle();
+            float r = (float)_src.th / 180.0f * (float)CV_PI;
+            icpRT.at<float>(0, 0) = cos(r);
+            icpRT.at<float>(0, 1) = -sin(r);
+            icpRT.at<float>(1, 0) = sin(r);
+            icpRT.at<float>(1, 1) = cos(r);
 
-            return output;
+            icpRT.at<float>(0, 2) = (float)_src.x;
+            icpRT.at<float>(1, 2) = (float)_src.y;
+
+            cv::Mat robotRT;
+            robotRT = cv::Mat::eye(3, 3, CV_32FC1);
+            robotRT.at<float>(0, 2) = (float)this->x;
+            robotRT.at<float>(1, 2) = (float)this->y;
+
+            outputRT = icpRT * robotRT;
+
+            return outputRT;            
         }
+        //Frame add_Motion(Frame &_src)
+        //{
+            //double d2r = 3.141592 / 180.0;
+            //double base_radian_th = this->th*d2r;
+
+            //Frame output;
+            //output.x = this->x + _src.x*cos(base_radian_th) - _src.y*sin(base_radian_th);
+            //output.y = this->y + _src.x*sin(base_radian_th) + _src.y*cos(base_radian_th);
+            //output.th = this->th + _src.th;
+            //output.rearrange_Angle();
+
+            //return output;
+        //}
 
     };
     
