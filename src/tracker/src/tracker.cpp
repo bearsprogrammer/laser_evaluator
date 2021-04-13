@@ -181,7 +181,7 @@ void tracker::display_Globalmap(void)
                 //cv::circle(Canvas, tmp_center_pt, target_[i].target_radius * grid_global.mm2pixel, 
                                                                             //cv::Scalar(0,0,255), 2); //tracking
                 cv::putText(Canvas, 
-                    cv::format("ROBOT[world]-> [x: %f][y: %f][th: %f]", output_robot.x, output_robot.y, output_robot.th*radian2degree), 
+                    cv::format("ROBOT[world]-> [x: %f][y: %f][th: %f]", output_robot.x, output_robot.y, output_robot.th), 
                     cv::Point(tmp_mark_pt.x, tmp_mark_pt.y+15), cv::FONT_HERSHEY_COMPLEX, 0.8f, cv::Scalar(250,0,0), 1, CV_AA);
             }
         }
@@ -302,8 +302,8 @@ void tracker::init_SRC(allen::Target &_target)
         //get_ZeroMeaned(_target, mean_pt);
         //output_matching.x -= (mean_pt.x / 1000.0);
         //output_matching.y -= (mean_pt.y / 1000.0);
-        output_matching.x = (mean_pt.x / 1000.0);       //m
-        output_matching.y = (mean_pt.y / 1000.0);
+        output_robot.x = (mean_pt.x / 1000.0);       //m
+        output_robot.y = (mean_pt.y / 1000.0);
 
         ROS_INFO("Number of Point-cloud for Robot contour is set: %d", (int)_target.src_object_pts.size());
     }
@@ -598,8 +598,15 @@ void tracker::match_Robot_new(std::vector<allen::Target> &_target)
             model_frame_output = model_frame.clone();
 
             //get robot pose
-            output_matching = output_matching.add_Motion(output);      //add RT from ICP output
-            output_robot = get_RobotPose(output_matching);
+            robot_RT = output_robot.add_Motion(output);      //add RT from ICP output
+            if(robot_RT.empty())    return;
+
+            output_robot.x = (double)robot_RT.at<float>(0, 2);
+            output_robot.y = (double)robot_RT.at<float>(1, 2);
+            output_robot.th += output.th;       //degree
+            output_robot.rearrange_Angle();
+            std::cout << "output_robot_th: " << output_robot.th << std::endl;
+            //output_robot = get_RobotPose(output_matching);
         }
 
         cv::imshow("matching", draw);
@@ -815,11 +822,54 @@ void tracker::GetMouseEvent(cv::Mat &_canvas)
         eval_bag.clear();
         eval_mat = cv::Mat();
         model_frame_output = cv::Mat();
+        robot_RT = cv::Mat();
 
         reset_mtx.unlock();
     }
 }
-void tracker::get_PredictCoordinate(allen::Frame _predict_posi, allen::Frame _output_robot)
+void tracker::get_PredictCoordinate(allen::Frame _predict_posi, cv::Mat _robot_RT)
+{
+    if(_robot_RT.empty())   return;
+
+    cv::Mat person_RT, new_person_RT;
+    person_RT = cv::Mat(3, 1, CV_32FC1, cv::Scalar(1));
+    //person_RT = cv::Mat::eye(3, 3, CV_32FC1);
+
+    //float p_r = (float)_predict_posi.th / 180.0f * (float)CV_PI;
+    //std::cout << "predict_th: " << _predict_posi.th << std::endl;
+    //printf("predict_th: %lf\n", _predict_posi.th);
+    //person_RT.at<float>(0,0) = cos(p_r);
+    //person_RT.at<float>(0,1) = -sin(p_r);
+    //person_RT.at<float>(1,0) = sin(p_r);
+    //person_RT.at<float>(1,1) = cos(p_r);
+
+    person_RT.at<float>(0,0) = (float)_predict_posi.x / 1000.0f;    //x (mm2m)
+    person_RT.at<float>(1,0) = (float)_predict_posi.y / 1000.0f;    //y
+
+    //new_person_RT = person_RT * _robot_RT;      //t_pose = d_pose * t-1_pose
+    new_person_RT = _robot_RT * person_RT;      //t_pose = d_pose * t-1_pose
+
+    std::cout << "calced new person RT: " << std::endl << new_person_RT << std::endl;
+    //assign new person point
+    eval_output.output_predict.centroid_pt.x = (double)new_person_RT.at<float>(0,0) * 1000.0;   //x (m2mm)
+    eval_output.output_predict.centroid_pt.y = (double)new_person_RT.at<float>(1,0) * 1000.0;   //y (m2mm)
+
+    cv::Point2f target_centroid = target_[TARGET_IDX].centroid_pt;      //ground-truth
+    if(std::isinf(target_centroid.x) || std::isinf(target_centroid.y))      return;
+
+    eval_output.error_centroid = get_dist2f(target_centroid, eval_output.output_predict.centroid_pt);
+    printf("error_centroid: %f\n\n", eval_output.error_centroid);
+
+    //feed
+    allen::Evaluation tmp_eval;
+    tmp_eval.time = ros::Time::now();
+    tmp_eval.error_target2GT = eval_output.error_centroid;
+    tmp_eval.GT_world = target_centroid;
+    tmp_eval.predict_world = eval_output.output_predict.centroid_pt;
+    eval_bag.push_back(tmp_eval);
+
+}
+void tracker::get_PredictCoordinate_(allen::Frame _predict_posi, allen::Frame _output_robot)
 {
     cv::Mat tmp_canvas = gui.canvas.clone();
 
@@ -942,7 +992,7 @@ void tracker::runLoop(void)
                 tracking_Targets(target_);
                 if(flag.get_flag(allen::FLAG::Name::predictOn))
                 {
-                    get_PredictCoordinate(eval_output.predict_posi, output_robot);
+                    get_PredictCoordinate(eval_output.predict_posi, robot_RT);
                 }
             }
         }

@@ -99,7 +99,14 @@ namespace allen
             icpRT.at<float>(1, 2) = (float)_src.y;
 
             cv::Mat robotRT;
+            float t_r = (float)this->th / 180.0f * (float)CV_PI;
             robotRT = cv::Mat::eye(3, 3, CV_32FC1);
+            //rotation
+            robotRT.at<float>(0, 0) = cos(t_r);
+            robotRT.at<float>(0, 1) = -sin(t_r);
+            robotRT.at<float>(1, 0) = sin(t_r);
+            robotRT.at<float>(1, 1) = cos(t_r);
+            //translation
             robotRT.at<float>(0, 2) = (float)this->x;
             robotRT.at<float>(1, 2) = (float)this->y;
 

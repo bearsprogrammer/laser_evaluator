@@ -62,7 +62,7 @@ private:
     std::mutex predict_mtx, reset_mtx;
     logger log_error;
     double confidence;
-    cv::Mat model_frame_output;
+    cv::Mat model_frame_output, robot_RT;
 
 public:
     std::vector<sensor*> sensors;
@@ -159,7 +159,8 @@ public:
     void tracking_Targets(std::vector<allen::Target> &_target);
     void display_Pointcloud(cv::Mat &_src1, cv::Mat &_src2, std::string _win_name);
     std::vector<cv::Point2f> extract_Contour(allen::Target &_robot, std::vector<bag_t> &_bag_cloud, bool _flag);
-    void get_PredictCoordinate(allen::Frame _predict_posi, allen::Frame _output_robot);
+    void get_PredictCoordinate(allen::Frame _predict_posi, cv::Mat _robot_RT);
+void get_PredictCoordinate_(allen::Frame _predict_posi, allen::Frame _output_robot);
     void assembly_evalData(void);
     void runLoop(void);
 
