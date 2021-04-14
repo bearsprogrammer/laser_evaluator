@@ -605,12 +605,12 @@ void tracker::match_Robot_new(std::vector<allen::Target> &_target)
             output_robot.y = (double)robot_RT.at<float>(1, 2);
             output_robot.th += output.th;       //degree
             output_robot.rearrange_Angle();
-            std::cout << "output_robot_th: " << output_robot.th << std::endl;
+            //std::cout << "output_robot_th: " << output_robot.th << std::endl;
             //output_robot = get_RobotPose(output_matching);
         }
 
         cv::imshow("matching", draw);
-        printf("confidence: %lf\n", success);
+        //printf("confidence: %lf\n", success);
 
     }
     
@@ -849,7 +849,7 @@ void tracker::get_PredictCoordinate(allen::Frame _predict_posi, cv::Mat _robot_R
     //new_person_RT = person_RT * _robot_RT;      //t_pose = d_pose * t-1_pose
     new_person_RT = _robot_RT * person_RT;      //t_pose = d_pose * t-1_pose
 
-    std::cout << "calced new person RT: " << std::endl << new_person_RT << std::endl;
+    //std::cout << "calced new person RT: " << std::endl << new_person_RT << std::endl;
     //assign new person point
     eval_output.output_predict.centroid_pt.x = (double)new_person_RT.at<float>(0,0) * 1000.0;   //x (m2mm)
     eval_output.output_predict.centroid_pt.y = (double)new_person_RT.at<float>(1,0) * 1000.0;   //y (m2mm)
@@ -858,7 +858,7 @@ void tracker::get_PredictCoordinate(allen::Frame _predict_posi, cv::Mat _robot_R
     if(std::isinf(target_centroid.x) || std::isinf(target_centroid.y))      return;
 
     eval_output.error_centroid = get_dist2f(target_centroid, eval_output.output_predict.centroid_pt);
-    printf("error_centroid: %f\n\n", eval_output.error_centroid);
+    //printf("error_centroid: %f\n\n", eval_output.error_centroid);
 
     //feed
     allen::Evaluation tmp_eval;
