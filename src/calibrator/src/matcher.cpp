@@ -802,7 +802,7 @@ void matcher::get_syncData()
 }
 void matcher::runLoop()
 {
-    ros::Rate r(15);
+    ros::Rate r(20);
     while (ros::ok())
     {
         get_syncData();

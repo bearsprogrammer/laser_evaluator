@@ -973,7 +973,7 @@ void tracker::get_syncData(void)
 }
 void tracker::runLoop(void)
 {
-    ros::Rate r(15);
+    ros::Rate r(20);
     while (ros::ok())
     {
         get_syncData();
