@@ -8,6 +8,10 @@ void tracker::initSubscriber(void)
     scan_4_sub_ = nh_.subscribe<sensor_msgs::LaserScan>("/scan_4", 10, boost::bind(&tracker::scan_callback, this, _1, 3));
     goalpose_sub_ = nh_.subscribe<cona_msgs::GoalPose>("/goalpose", 1, &tracker::GoalPose_callback, this);
 }
+void tracker::initServiceClient(void)
+{
+    client_calib = nh_.serviceClient<calibrator_server::Calibrate_laser>("/calibration/execute");
+}
 void tracker::scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx)
 {
     if(!sensors[idx]->get_tf_flag) sensors[idx]->get_tf_flag = sensors[idx]->get_tf(); 
@@ -576,8 +580,9 @@ void tracker::match_Robot_new(std::vector<allen::Target> &_target)
     std::vector<cv::Point2f> tmp_observ_points =    
                                 extract_Contour(_target[ROBOT_IDX], bag_cloud_, 0);  //m
 
-    bool valid_run = false;
-    if((int)tmp_model_points.size() > 0)    valid_run = true;
+    bool valid_run = true;
+    if((int)tmp_model_points.size() <= 0)     valid_run = false;
+    if((int)tmp_observ_points.size() <= 0)    valid_run = false;
     if(valid_run)
     {
         cv::Mat draw, model_frame, observ_frame;
@@ -800,6 +805,22 @@ void tracker::GetMouseEvent(cv::Mat &_canvas)
             }
         }
     }
+    if(flag.get_flag(allen::FLAG::Name::calibration))
+    {
+        calibrator_server::Calibrate_laser srv;
+        srv.request.calibrate = true;
+        if(client_calib.call(srv))
+        {
+            ROS_INFO("Response[calibration]: %d", srv.response.success);
+            gui.clicked_button(_canvas, gui.b_calib);
+        }
+        else
+        {
+            ROS_ERROR("Fail to call service [calibration]");
+            gui.clicked_button(_canvas, gui.b_calib);
+        }
+        flag.set_flag_off(allen::FLAG::Name::calibration);
+    }
     if(flag.get_flag(allen::FLAG::Name::setRect) && m_up)
         set_Target(target_, gui.drag_rect);
     if(flag.get_flag(allen::FLAG::Name::reset))
@@ -996,7 +1017,6 @@ void tracker::runLoop(void)
                 }
             }
         }
-        //GetMouseEvent(gui.canvas);
         ros::spinOnce();
         r.sleep();
     }

@@ -7,8 +7,8 @@
 #include <tf/tf.h>
 #include <tf/transform_listener.h>
 
-#include "calibrator/parameter.hpp"
-#include "calibrator/templete.hpp"
+#include "calibrator_server/parameter.hpp"
+#include "calibrator_server/templete.hpp"
 
 #ifndef SENSOR_H
 #define SENSOR_H
@@ -52,7 +52,7 @@ public:
         }
         catch(...)
         {
-            ROS_ERROR("Fail to get tf");
+            ROS_ERROR("Fail to get tf[%s]", child_frame.c_str());
             return 0;
         }
         

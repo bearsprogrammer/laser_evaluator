@@ -15,6 +15,7 @@
 #include "tracker/gui.hpp"
 #include "tracker/ICP.hpp" 
 #include "tracker/logger.hpp"
+#include "calibrator_server/Calibrate_laser.h"
 
 #define SENSORNUM 4
 #define SRCFRAME 0
@@ -53,6 +54,7 @@ public:
 class tracker
 {
 private:
+    //ros
     ros::NodeHandle nh_;
     ros::Subscriber scan_1_sub_, scan_2_sub_, scan_3_sub_, scan_4_sub_, goalpose_sub_;
     double degree2radian, radian2degree;
@@ -65,6 +67,7 @@ private:
     cv::Mat model_frame_output, robot_RT;
 
 public:
+    ros::ServiceClient client_calib;
     std::vector<sensor*> sensors;
     std::vector<float> scale_factor;
     allen::Grid_param grid, grid_tracker, grid_global;
@@ -81,6 +84,7 @@ public:
 
 private:
     void initSubscriber(void);
+    void initServiceClient(void);
     void scan_callback(const sensor_msgs::LaserScan::ConstPtr &msg, int idx);
     void GoalPose_callback(const cona_msgs::GoalPose::ConstPtr &msg);
     void get_syncData(void); 
@@ -128,6 +132,7 @@ public:
         log_error = logger("src/tracker/log/", "eval_dist", cv::FileStorage::WRITE);
 
         initSubscriber();
+        initServiceClient();
     }
     ~tracker()
     {

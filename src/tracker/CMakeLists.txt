@@ -33,7 +33,7 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
   ${OpenCV_INCLUDE_DIRS}
   ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/
-#  ${PROJECT_SOURCE_DIR}/../../devel/include/
+  ${PROJECT_SOURCE_DIR}/../../devel/include/
 )
 
  add_executable(${PROJECT_NAME} src/main.cpp src/tracker.cpp src/MouseInterface.cpp src/ICP.cpp)

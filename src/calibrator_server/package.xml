@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>calibrator</name>
+  <name>calibrator_server</name>
   <version>0.0.0</version>
   <description>The templete package for launching</description>
 
@@ -14,6 +14,8 @@
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>tf</depend>
+  <depend>message_generation</depend>
+  <depend>message_runtime</depend>
 
   <export>
 

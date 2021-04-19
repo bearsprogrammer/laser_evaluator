@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 2.8.3)
-project(calibrator)
+cmake_minimum_required(VERSION 3.0.2)
+project(calibrator_server)
 
 # for debug mode
 set(CMAKE_BUILD_TYPE Debug)
@@ -13,15 +13,28 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   sensor_msgs
   tf
+  message_generation
+  message_runtime
 )
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
 
+## Generate services in the 'srv' folder
+ add_service_files(
+   FILES
+   Calibrate_laser.srv
+ )
+
+ generate_messages(
+	DEPENDENCIES
+	std_msgs
+)
+
 catkin_package(
 #  INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME} 
-  CATKIN_DEPENDS roscpp std_msgs sensor_msgs tf
+  CATKIN_DEPENDS roscpp std_msgs sensor_msgs tf message_generation message_runtime
 #  DEPENDS system_lib
 )
 
@@ -35,10 +48,10 @@ include_directories(
 #  ${PROJECT_SOURCE_DIR}/../../devel/include/
 )
 
- add_executable(${PROJECT_NAME} src/main.cpp src/matcher.cpp)
- add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+ add_executable(${PROJECT_NAME}_node src/calibrator_server.cpp src/matcher.cpp)
+ add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
- target_link_libraries(${PROJECT_NAME}
+ target_link_libraries(${PROJECT_NAME}_node
    ${catkin_LIBRARIES}
    ${OpenCV_LIBRARIES}
  )
