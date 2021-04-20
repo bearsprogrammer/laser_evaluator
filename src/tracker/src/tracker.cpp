@@ -182,9 +182,6 @@ void tracker::display_Globalmap(void)
                 cv::Point tmp_robot_pt = laser2grid(cv::Point2f(output_robot.x*1000.0f, output_robot.y*1000.0f), 
                                                     grid_global.base_pt[SRCFRAME], grid_global.mm2pixel);
 
-
-
-
                 //plot axis of robot
                 std::pair<allen::Frame, allen::Frame> tmp_axis_world = output_robot.getRobotAxis(1.0f);
                 cv::Point axis_X_pt = laser2grid(cv::Point2f(tmp_axis_world.first.x*1000.0f, tmp_axis_world.first.y*1000.0f),
