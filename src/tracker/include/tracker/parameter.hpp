@@ -14,7 +14,7 @@ namespace allen
         cv::Mat occup, free;
 
     public:
-        Grid_param() : grid_row(1000), grid_col(1000)
+        Grid_param() : grid_row(800), grid_col(800)
         {
             robot_col = grid_col / 2;
             robot_row = grid_row / 2;
