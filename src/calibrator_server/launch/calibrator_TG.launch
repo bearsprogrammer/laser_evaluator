@@ -10,7 +10,7 @@
 
 	<!-- 2021-01-12 -->
 	<!-- tracking for ground_truth -->
-	<node pkg="tracker" type="tracker" name="tracker" output="screen">
-	</node>
+	<!-- node pkg="tracker" type="tracker" name="tracker" output="screen" -->
+	<!-- /node -->
 
 </launch>

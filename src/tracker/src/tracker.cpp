@@ -181,6 +181,20 @@ void tracker::display_Globalmap(void)
                 //display robot contour from icp result
                 cv::Point tmp_robot_pt = laser2grid(cv::Point2f(output_robot.x*1000.0f, output_robot.y*1000.0f), 
                                                     grid_global.base_pt[SRCFRAME], grid_global.mm2pixel);
+
+
+
+
+                //plot axis of robot
+                std::pair<allen::Frame, allen::Frame> tmp_axis_world = output_robot.getRobotAxis(1.0f);
+                cv::Point axis_X_pt = laser2grid(cv::Point2f(tmp_axis_world.first.x*1000.0f, tmp_axis_world.first.y*1000.0f),
+                                                    grid_global.base_pt[SRCFRAME], grid_global.mm2pixel);
+                cv::Point axis_Y_pt = laser2grid(cv::Point2f(tmp_axis_world.second.x*1000.0f, tmp_axis_world.second.y*1000.0f),
+                                                    grid_global.base_pt[SRCFRAME], grid_global.mm2pixel);
+
+                cv::line(Canvas, tmp_robot_pt, axis_X_pt, cv::Scalar(0,0,255), 2);
+                cv::line(Canvas, tmp_robot_pt, axis_Y_pt, cv::Scalar(255,0,0), 2);
+
                 cv::circle(Canvas, tmp_robot_pt, 10, cv::Scalar(0,255,0), 2);   //ICP
                 //cv::circle(Canvas, tmp_center_pt, target_[i].target_radius * grid_global.mm2pixel, 
                                                                             //cv::Scalar(0,0,255), 2); //tracking

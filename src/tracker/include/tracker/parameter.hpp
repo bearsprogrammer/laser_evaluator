@@ -14,7 +14,7 @@ namespace allen
         cv::Mat occup, free;
 
     public:
-        Grid_param() : grid_row(800), grid_col(800)
+        Grid_param() : grid_row(1000), grid_col(1000)
         {
             robot_col = grid_col / 2;
             robot_row = grid_row / 2;
@@ -113,6 +113,41 @@ namespace allen
             outputRT = icpRT * robotRT;
 
             return outputRT;            
+        }
+        std::pair<Frame, Frame> getRobotAxis(float _length_m)
+        {
+            std::pair<Frame, Frame> output_axis;
+
+            cv::Mat robot_RT, axis_X, axis_Y;
+            robot_RT = cv::Mat::eye(3, 3, CV_32FC1);
+            axis_X = cv::Mat(3, 1, CV_32FC1, cv::Scalar(1));
+            axis_Y = cv::Mat(3, 1, CV_32FC1, cv::Scalar(1));
+            float r = (float)this->th / 180.0f * (float)CV_PI;
+            //rotation
+            robot_RT.at<float>(0, 0) = cos(r);
+            robot_RT.at<float>(0, 1) = -sin(r);
+            robot_RT.at<float>(1, 0) = sin(r);
+            robot_RT.at<float>(1, 1) = cos(r);
+            //translation
+            robot_RT.at<float>(0, 2) = (float)this->x;
+            robot_RT.at<float>(1, 2) = (float)this->y;
+
+            axis_X.at<float>(0, 0) = _length_m;
+            axis_X.at<float>(1, 0) = 0.0f;
+            axis_Y.at<float>(0, 0) = 0.0f;
+            axis_Y.at<float>(1, 0) = _length_m;
+
+            cv::Mat output_X, output_Y;
+            output_X = robot_RT * axis_X;
+            output_Y = robot_RT * axis_Y;
+
+            //output
+            output_axis.first.x = output_X.at<float>(0,0);      //X-axis of robot
+            output_axis.first.y = output_X.at<float>(1,0);
+            output_axis.second.x = output_Y.at<float>(0,0);     //Y-axis of robot
+            output_axis.second.y = output_Y.at<float>(1,0);
+
+            return output_axis;
         }
         //Frame add_Motion(Frame &_src)
         //{
