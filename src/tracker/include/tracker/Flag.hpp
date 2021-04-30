@@ -15,7 +15,8 @@ namespace allen
             targetOn,
             reset,
             robotOn,
-            predictOn
+            predictOn,
+            ROIkcfOn
         };
         std::vector<std::pair<Name, bool> > data;
         std::vector<std::pair<Name, bool> > init_data;
@@ -32,6 +33,7 @@ namespace allen
             push_flag(FLAG::Name::reset, false);
             push_flag(FLAG::Name::robotOn, false);
             push_flag(FLAG::Name::predictOn, false);
+            push_flag(FLAG::Name::ROIkcfOn, false);
         }
         ~FLAG()
         {}

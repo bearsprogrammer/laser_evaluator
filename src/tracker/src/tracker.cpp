@@ -364,6 +364,20 @@ void tracker::tracking_Targets(std::vector<allen::Target> &_target)
         //printf("[target_%d]->[gx: %d][gy: %d]\n", i, tmp_target.center_pt.x, tmp_target.center_pt.y);
 
         //cv::rectangle(tmp_debug_mat, _target[i].target_rect, cv::Scalar(255,0,0), 2);
+
+        //set ROI for KCF
+        roi_kcf = tmp_target.set_Region(grid_pt);
+        if(!flag.get_flag(allen::FLAG::Name::ROIkcfOn) && !roi_kcf.empty())
+        {
+            tracker_KCF->init(gui.canvas, roi_kcf);
+        }
+        //update KCF
+        if(!roi_kcf.empty())
+        {
+            bool valid_kcf = tracker_KCF->update(gui.canvas, roi_kcf);
+            cv::rectangle(gui.canvas, roi_kcf, cv::Scalar(0,255,0), 2, 1);
+        }
+
         std::vector<cv::Point2f> tmp_pts;
         cv::Point2f centroid_laser = rearrange_Centroid(grid_pt, laser_pt, bag_cloud_, tmp_debug_mat, tmp_pts);
 
@@ -855,6 +869,7 @@ void tracker::GetMouseEvent(cv::Mat &_canvas)
         eval_mat = cv::Mat();
         model_frame_output = cv::Mat();
         robot_RT = cv::Mat();
+        roi_kcf = cv::Rect2d();
 
         reset_mtx.unlock();
     }

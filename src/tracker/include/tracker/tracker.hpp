@@ -66,6 +66,8 @@ private:
     logger log_error;
     double confidence;
     cv::Mat model_frame_output, robot_RT;
+    cv::Ptr<cv::Tracker> tracker_KCF;
+    cv::Rect2d roi_kcf;
 
 public:
     ros::ServiceClient client_calib;
@@ -131,6 +133,9 @@ public:
         grid_global.base_pt.push_back(cv::Point2f((float)grid_global.grid_col-GRID_MARGIN, (float)grid_global.grid_row-GRID_MARGIN));
 
         log_error = logger("src/tracker/log/", "eval_dist", cv::FileStorage::WRITE);
+
+        //init non-target tracker
+        tracker_KCF = cv::TrackerKCF::create();
 
         initSubscriber();
         initServiceClient();
