@@ -9,6 +9,7 @@ namespace allen
         float error_target2GT;
         cv::Point2f predict_world;
         cv::Point2f GT_world;
+        std::vector<cv::Point2f> non_target_world;
 
     public:
         Evaluation()

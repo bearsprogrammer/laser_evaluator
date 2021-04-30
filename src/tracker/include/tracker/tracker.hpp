@@ -5,8 +5,9 @@
 #include <ros/ros.h>
 #include <sensor_msgs/LaserScan.h> 
 #include <tf/tf.h>
-#include <opencv2/opencv.hpp>
 #include <cona_msgs/GoalPose.h>
+#include <opencv2/opencv.hpp>
+#include <opencv2/tracking.hpp>
 
 #include "tracker/parameter.hpp"
 #include "tracker/templete.hpp"
@@ -26,7 +27,7 @@
 #define TRACKING_RADIUS 300.0f
 #define GUI_MARGIN 100
 #define GRID_MARGIN 300.0f
-#define TARGETNUM 2 
+#define TARGETNUM 4
 #define ROBOT_IDX 0
 #define TARGET_IDX 1
 

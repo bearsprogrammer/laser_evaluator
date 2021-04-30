@@ -200,14 +200,14 @@ void tracker::display_Globalmap(void)
                     cv::Point(tmp_mark_pt.x, tmp_mark_pt.y+15), cv::FONT_HERSHEY_COMPLEX, 0.8f, cv::Scalar(250,0,0), 1, CV_AA);
             }
         }
-        else if(i == TARGET_IDX)
+        else if(i == TARGET_IDX)    //GroundTruth
         {
             cv::circle(Canvas, tmp_center_pt, target_[i].target_radius * grid_global.mm2pixel, cv::Scalar(0,255,0), 2);
             cv::putText(Canvas, 
                 cv::format("TARGET[world]-> [x: %f][y: %f]", target_[i].centroid_pt.x/1000.0f, target_[i].centroid_pt.y/1000.0f), 
                 cv::Point(tmp_mark_pt.x, tmp_mark_pt.y+15), cv::FONT_HERSHEY_COMPLEX, 0.8f, cv::Scalar(0,255,0), 1, CV_AA);
         }
-        else
+        else                        //non-target
             cv::circle(Canvas, tmp_center_pt, target_[i].target_radius * grid_global.mm2pixel, cv::Scalar(255,0,0), 2);
         tmp_mark_pt.y += 30;
     }
@@ -898,67 +898,16 @@ void tracker::get_PredictCoordinate(allen::Frame _predict_posi, cv::Mat _robot_R
     tmp_eval.error_target2GT = eval_output.error_centroid;
     tmp_eval.GT_world = target_centroid;
     tmp_eval.predict_world = eval_output.output_predict.centroid_pt;
+
+    for(int i = 0; i < TARGETNUM; i++)
+    {
+        if(i < 2)   continue;
+        cv::Point2f tmp_pt = target_[i].centroid_pt;
+        tmp_eval.non_target_world.push_back(tmp_pt);
+    }
+
     eval_bag.push_back(tmp_eval);
 
-}
-void tracker::get_PredictCoordinate_(allen::Frame _predict_posi, allen::Frame _output_robot)
-{
-    cv::Mat tmp_canvas = gui.canvas.clone();
-
-    allen::Frame tmp_PF = _predict_posi;    //mm
-    allen::Target tmp_output;               //mm
-
-    /////////////debug///////////////
-    //tmp_PF.x = 1.0;
-    //tmp_PF.y = 2.0;
-    //tmp_PF.th = 0.0;
-    /////////////////////////////////
-    tmp_PF.x /= 1000.0;
-    tmp_PF.y /= 1000.0;
-    
-    //printf("robot-> [x: %f, y: %f, th: %f], predict-> [x: %f, y: %f, th: %f]\n", 
-                                            //_output_robot.x, _output_robot.y, _output_robot.th,     //radian
-                                            //tmp_PF.x, tmp_PF.y, tmp_PF.th);
-
-    tf::Quaternion q_robot, q_pf;
-    //R
-    q_robot.setRPY(0, 0, _output_robot.th);
-    q_pf.setRPY(0, 0, tmp_PF.th);
-    tf::Matrix3x3 robot_r(q_robot);
-    tf::Matrix3x3 pf_r(q_pf);
-    //T
-    tf::Vector3 robot_T(_output_robot.x, _output_robot.y, 0.0);
-    tf::Vector3 pf_T(tmp_PF.x, tmp_PF.y, 0.0);
-    //output
-    tf::Matrix3x3 out_R = robot_r * pf_r;
-    tf::Vector3 out_T = robot_r * pf_T + robot_T;
-
-    double x = out_T.getX() * 1000.0;    //m to mm
-    double y = out_T.getY() * 1000.0;    //m to mm
-
-    //debug
-    //cv::Point predict_pt = laser2grid(cv::Point2f(x, y), grid_tracker.base_pt[SRCFRAME], grid_tracker.mm2pixel);
-    //printf("output_x: %lf, output_y: %lf, [g_x: %d, g_y: %d]\n", x, y, predict_pt.x, predict_pt.y);
-    //cv::circle(tmp_canvas, predict_pt, 5, cv::Scalar(0,255,0), -1);
-    //cv::imshow("Predict", tmp_canvas);
-
-    //output
-    tmp_output.centroid_pt = cv::Point2f(x, y);         
-    eval_output.output_predict.centroid_pt = tmp_output.centroid_pt;    //mm
-    cv::Point2f target_centroid = target_[TARGET_IDX].centroid_pt;      //ground-truth
-
-    if(std::isinf(target_centroid.x) || std::isinf(target_centroid.y))      return;
-    eval_output.error_centroid = get_dist2f(target_centroid, eval_output.output_predict.centroid_pt);
-
-    printf("error_centroid: %f\n", eval_output.error_centroid);
-
-    //feed
-    allen::Evaluation tmp_eval;
-    tmp_eval.time = ros::Time::now();
-    tmp_eval.error_target2GT = eval_output.error_centroid;
-    tmp_eval.GT_world = target_centroid;
-    tmp_eval.predict_world = eval_output.output_predict.centroid_pt;
-    eval_bag.push_back(tmp_eval);
 }
 void tracker::assembly_evalData(void)
 {
@@ -968,7 +917,10 @@ void tracker::assembly_evalData(void)
         return;
     }
 
-    cv::Mat logging_mat((int)eval_bag.size(), 6, CV_64FC1, cv::Scalar(0.0f));
+    int default_size = 6;
+    int col_size = default_size + (TARGETNUM - 2) * 2;
+    cv::Mat logging_mat((int)eval_bag.size(), col_size, CV_64FC1, cv::Scalar(0.0f));
+
     for(int i = 0; i < (int)eval_bag.size(); i++) 
     {
         logging_mat.at<double>(i, 0) = eval_bag[i].time.toSec();
@@ -977,6 +929,15 @@ void tracker::assembly_evalData(void)
         logging_mat.at<double>(i, 3) = (double)eval_bag[i].predict_world.y;
         logging_mat.at<double>(i, 4) = (double)eval_bag[i].GT_world.x;
         logging_mat.at<double>(i, 5) = (double)eval_bag[i].GT_world.y;
+
+        int col_idx = default_size;
+        for(int j = 0; j < (int)eval_bag[i].non_target_world.size(); j++)
+        {
+            cv::Point2f tmp_pt = eval_bag[i].non_target_world[j];
+            logging_mat.at<double>(i, col_idx) = (double)tmp_pt.x;
+            logging_mat.at<double>(i, col_idx+1) = (double)tmp_pt.y;
+            col_idx += 2;
+        }
     }
 
     eval_mat = logging_mat.clone();
