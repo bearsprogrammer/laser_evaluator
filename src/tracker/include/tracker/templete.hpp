@@ -86,12 +86,12 @@ namespace allen
 
             this->center_pt = tmp_center;
         }
-        cv::Rect set_Region(cv::Point _grid_center)
+        cv::Rect set_Region(cv::Point _grid_center, cv::Size2f _size_mm)
         {
             allen::Grid_param grid;
 
-            float width_mm = 2000.0f;
-            float height_mm = 2000.0f;
+            float width_mm = _size_mm.width;
+            float height_mm = _size_mm.height;
             float width_pixel = width_mm * grid.mm2pixel;
             float height_pixel = height_mm * grid.mm2pixel;
             cv::Point start_pt;

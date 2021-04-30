@@ -366,16 +366,20 @@ void tracker::tracking_Targets(std::vector<allen::Target> &_target)
         //cv::rectangle(tmp_debug_mat, _target[i].target_rect, cv::Scalar(255,0,0), 2);
 
         //set ROI for KCF
-        roi_kcf = tmp_target.set_Region(grid_pt);
-        if(!flag.get_flag(allen::FLAG::Name::ROIkcfOn) && !roi_kcf.empty())
+        if(i == 3)
         {
-            tracker_KCF->init(gui.canvas, roi_kcf);
-        }
-        //update KCF
-        if(!roi_kcf.empty())
-        {
-            bool valid_kcf = tracker_KCF->update(gui.canvas, roi_kcf);
-            cv::rectangle(gui.canvas, roi_kcf, cv::Scalar(0,255,0), 2, 1);
+            roi_kcf = tmp_target.set_Region(grid_pt, cv::Size2f(1000.0f, 1000.0f));
+            if(!flag.get_flag(allen::FLAG::Name::ROIkcfOn) && !roi_kcf.empty())
+            {
+                tracker_KCF->init(tmp_debug_mat, roi_kcf);
+            }
+            //update KCF
+            if(!roi_kcf.empty())
+            {
+                bool valid_kcf = tracker_KCF->update(tmp_debug_mat, roi_kcf);
+                cv::rectangle(tmp_debug_mat, roi_kcf, cv::Scalar(0,255,0), 2, 1);
+            }
+
         }
 
         std::vector<cv::Point2f> tmp_pts;
@@ -402,7 +406,7 @@ void tracker::tracking_Targets(std::vector<allen::Target> &_target)
 
     //std::cout << std::endl;
     //std::cout << std::endl;
-    //cv::imshow("debug", tmp_debug_mat);
+    cv::imshow("debug", tmp_debug_mat);
     //cv::waitKey(0);
 }
 void tracker::display_Pointcloud(cv::Mat &_src1, cv::Mat &_src2, std::string _win_name)
@@ -499,7 +503,7 @@ std::vector<cv::Point2f> tracker::extract_Contour(allen::Target &_robot, std::ve
     {
         if((int)_robot.object_pts.size() == 0)  return std::vector<cv::Point2f>();
         //set search region
-        cv::Rect tmp_region = _robot.set_Region(_robot.center_pt);
+        cv::Rect tmp_region = _robot.set_Region(_robot.center_pt, cv::Size2f(2000.0f, 2000.0f));
         cv::Mat tmp_contour = tmp_canvas(tmp_region);
         cv::Mat resize_contour;
 
@@ -714,7 +718,7 @@ cv::Point2f tracker::rearrange_Centroid(cv::Point _grid_src, cv::Point2f _laser_
         for(int j = 0; j < (int)tmp_pointcloud.size(); j++)
         {
             allen::LaserPointCloud tmp_lpc = tmp_pointcloud[j];
-            float dist = get_dist2f(_laser_src, tmp_lpc.laser_coordinate_);
+            float dist = get_dist2f(_laser_src, tmp_lpc.laser_coordinate_);     //get dist between center and point-cloud
             if(dist <= TRACKING_RADIUS)
             {
                 tmp_target_bag.push_back(tmp_lpc);
@@ -728,7 +732,7 @@ cv::Point2f tracker::rearrange_Centroid(cv::Point _grid_src, cv::Point2f _laser_
 
         }
     }
-
+    //Meanshift
     centroid = calc_Mean(tmp_target_bag);
     _tmp_object_pts.swap(tmp_object_pts);
     //cv::imshow("debug", _debug_mat);
