@@ -16,6 +16,7 @@
 #include "tracker/gui.hpp"
 #include "tracker/ICP.hpp" 
 #include "tracker/logger.hpp"
+#include "tracker/KCF_laser.hpp"
 #include "calibrator_server/Calibrate_laser.h"
 
 #define SENSORNUM 4
@@ -66,8 +67,10 @@ private:
     logger log_error;
     double confidence;
     cv::Mat model_frame_output, robot_RT;
+    //KCF
     cv::Ptr<cv::Tracker> tracker_KCF;
     cv::Rect2d roi_kcf;
+    std::vector<KCF_laser> target_trackers;
 
 public:
     ros::ServiceClient client_calib;
@@ -136,6 +139,9 @@ public:
 
         //init non-target tracker
         tracker_KCF = cv::TrackerKCF::create();
+
+        for(int i = 0; i < TARGETNUM-1; i++)
+            target_trackers.push_back(KCF_laser());
 
         initSubscriber();
         initServiceClient();

@@ -66,6 +66,24 @@ namespace allen
             src_object_pts_m = std::vector<cv::Point2f>();
             src_dp_mat = cv::Mat();
         }
+        cv::Point get_Centerpt(cv::Rect2d &_src)
+        {
+            cv::Point output;
+            if(_src.width <= 0 || _src.height <= 0)
+            {
+                ROS_ERROR("[tracker]target_rect's width[%lf], height[%lf] are unset..", 
+                                        _src.width, _src.height);
+                output.x = -1;
+                output.y = -1;
+
+                return output;
+            }
+
+            output.x = _src.x + (_src.width/2);  
+            output.y = _src.y + (_src.height/2);  
+
+            return output;
+        }
         void set_Centerpt()
         {
             if(this->target_rect.width <= 0 || this->target_rect.height <= 0)
@@ -75,7 +93,8 @@ namespace allen
                 return;
             }
             cv::Point tmp_center;
-            tmp_center.x = this->target_rect.x + (this->target_rect.width/2);  tmp_center.y = this->target_rect.y + (this->target_rect.height/2);  
+            tmp_center.x = this->target_rect.x + (this->target_rect.width/2);  
+            tmp_center.y = this->target_rect.y + (this->target_rect.height/2);  
 
             if(this->target_rect.contains(tmp_center) == false)
             {
