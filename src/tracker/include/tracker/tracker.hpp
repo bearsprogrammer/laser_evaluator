@@ -140,8 +140,8 @@ public:
         //init non-target tracker
         tracker_KCF = cv::TrackerKCF::create();
 
-        for(int i = 0; i < TARGETNUM-1; i++)
-            target_trackers.push_back(KCF_laser());
+        for(int i = 1; i < TARGETNUM; i++)
+            target_trackers.push_back(KCF_laser(i));
 
         initSubscriber();
         initServiceClient();
